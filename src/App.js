@@ -5,6 +5,7 @@ const getAbilityMod = (score) => Math.floor((score - 10) / 2);
 
 // --- D&D 3.5e Specific Constants ---
 const STANDARD_ABILITY_COSTS_3_5E = {
+    3: -11, 4: -7, 5: -4, 6: -2, 7: -1, // Negative costs for scores below 8
     8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 6, 15: 8, 16: 10, 17: 13, 18: 16,
 };
 const RACE_MODIFIERS_3_5E = {
@@ -18,6 +19,7 @@ const DEFAULT_MAX_PURCHASABLE_3_5E = 18;
 
 // --- D&D 5e Specific Constants ---
 const STANDARD_ABILITY_COSTS_5E = {
+    3: -9, 4: -6, 5: -4, 6: -2, 7: -1, // Negative costs for scores below 8 (cumulative from 8)
     8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9, // Cumulative costs from 8
 };
 const RACE_MODIFIERS_5E = {
@@ -54,9 +56,12 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
     const [useCustomCosts, setUseCustomCosts] = useState(false);
     const [customAbilityCosts, setCustomAbilityCosts] = useState({ ...STANDARD_ABILITY_COSTS_3_5E });
 
-    // New states for min/max purchasable scores
+    // States for min/max purchasable scores
     const [minPurchasableScore, setMinPurchasableScore] = useState(DEFAULT_MIN_PURCHASABLE_3_5E);
     const [maxPurchasableScore, setMaxPurchasableScore] = useState(DEFAULT_MAX_PURCHASABLE_3_5E);
+
+    // State for collapsing rules section
+    const [isRulesCollapsed, setIsRulesCollapsed] = useState(false);
 
 
     const [calculatedStats, setCalculatedStats] = useState({
@@ -71,7 +76,10 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         if (activeCosts.hasOwnProperty(score)) {
             return activeCosts[score];
         }
-        return Infinity;
+        // If a score is requested that's outside our defined costs,
+        // it means it's an invalid score for point buy, so return Infinity
+        // to prevent it from being selected due to cost limits.
+        return Infinity; 
     }, [useCustomCosts, customAbilityCosts]);
 
     const handleCustomRacialModChange = (ability, value) => {
@@ -94,7 +102,14 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
         for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
             const currentTargetScore = targetScores[ability];
-            totalPointsSpent += getCostForScore(currentTargetScore);
+            // Ensure we calculate cost only for valid scores in the active range (minPurchasable to maxPurchasable)
+            // If the currentTargetScore falls outside the valid range, its cost should not be included
+            // or ideally, the score itself would have been clamped by the useEffect below.
+            const cost = getCostForScore(currentTargetScore);
+            if (cost !== Infinity) { // Only add cost if it's a valid, defined score
+                totalPointsSpent += cost;
+            }
+
             const raceMod = activeRacialModifiers[ability] || 0;
             const finalScore = currentTargetScore + raceMod;
             finalAbilityScores[ability] = finalScore;
@@ -119,17 +134,34 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             const currentScore = newTargetScores[ability];
             const newScore = currentScore + delta;
 
-            // Apply min/max purchasable limits here based on state
+            // CRITICAL FIX: Apply min/max purchasable limits here based on state
+            // The check MUST use the dynamic minPurchasableScore and maxPurchasableScore
             if (newScore < minPurchasableScore || newScore > maxPurchasableScore) {
+                return prevTargetScores; // Do not allow adjustment outside the set range
+            }
+
+            // Ensure the new score has a defined cost before allowing the change
+            const costOfNewScore = getCostForScore(newScore);
+            if (costOfNewScore === Infinity) {
+                return prevTargetScores; // If the target score has no defined cost, it's invalid
+            }
+
+            // Calculate hypothetical total points spent with the new score
+            let hypotheticalPointsSpent = 0;
+            for (const ab of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+                const scoreToCost = (ab === ability) ? newScore : newTargetScores[ab];
+                const cost = getCostForScore(scoreToCost);
+                if (cost === Infinity) { // If any score in the hypothetical set is invalid, break
+                    return prevTargetScores;
+                }
+                hypotheticalPointsSpent += cost;
+            }
+
+            // Check if the hypothetical total points exceed the pool
+            if (hypotheticalPointsSpent > pointPool) {
                 return prevTargetScores;
             }
 
-            const hypotheticalPointsSpent = Object.keys(newTargetScores).reduce((acc, currentAbility) => {
-                const scoreToCost = (currentAbility === ability) ? newScore : newTargetScores[currentAbility];
-                const cost = getCostForScore(scoreToCost);
-                return acc + cost;
-            }, 0);
-            if (hypotheticalPointsSpent > pointPool) return prevTargetScores;
             newTargetScores[ability] = newScore;
             return newTargetScores;
         });
@@ -141,39 +173,80 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
     const handleMinMaxChange = (setter, value) => {
         const parsedValue = parseInt(value);
-        // Ensure it's a number and within a reasonable absolute range (e.g., 1-30, not typical but prevents craziness)
+        // Allow empty string to clear input, but enforce reasonable bounds for numbers
         if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) {
             setter(parsedValue);
-            // After changing min/max, it's good practice to ensure current scores still comply
-            // For simplicity here, we let the next adjustment or user reset handle invalid states.
-            // A more complex solution would force scores back into range here.
-        } else if (value === '') { // Allow clearing the input for partial entry
-            setter(''); // Set to empty string to allow user to type
+        } else if (value === '') {
+            setter('');
         }
+        // If parsed value is invalid (e.g., "abc"), do nothing, preserve current state
     };
 
-    // Reset scores to minPurchasableScore when min/max change, if current scores are out of bounds
+    // Effect to clamp scores when minPurchasableScore or maxPurchasableScore changes
     useEffect(() => {
         setTargetScores(prevScores => {
             const updatedScores = { ...prevScores };
             let changed = false;
             for (const ability in updatedScores) {
-                if (updatedScores[ability] < minPurchasableScore) {
-                    updatedScores[ability] = minPurchasableScore;
-                    changed = true;
-                } else if (updatedScores[ability] > maxPurchasableScore) {
-                    updatedScores[ability] = maxPurchasableScore;
+                const currentScore = updatedScores[ability];
+                let newScore = currentScore;
+                if (currentScore < minPurchasableScore) {
+                    newScore = minPurchasableScore;
+                } else if (currentScore > maxPurchasableScore) {
+                    newScore = maxPurchasableScore;
+                }
+
+                // Ensure the clamped score also has a defined cost
+                if (getCostForScore(newScore) === Infinity) {
+                     // If clamping to a score that has no defined cost, default to 8
+                     // This prevents the calculator from getting stuck if min/max makes scores unpurchasable
+                     newScore = DEFAULT_MIN_PURCHASABLE_3_5E; // Fallback
+                     if (getCostForScore(newScore) === Infinity || newScore < minPurchasableScore || newScore > maxPurchasableScore) {
+                        // If even fallback is bad, just set to the new min limit if it has a cost
+                        const closestValidScore = Object.keys(STANDARD_ABILITY_COSTS_3_5E)
+                                                .map(Number)
+                                                .filter(s => s >= minPurchasableScore && s <= maxPurchasableScore)
+                                                .sort((a,b) => a - b)[0]; // Find the lowest purchasable score that has a cost
+                        newScore = closestValidScore !== undefined ? closestValidScore : DEFAULT_MIN_PURCHASABLE_3_5E; // Fallback if no valid score in range
+                     }
+                }
+
+
+                if (newScore !== currentScore) {
+                    updatedScores[ability] = newScore;
                     changed = true;
                 }
             }
+            // If the minimum or maximum purchasable score changes and the current scores are outside this range, reset them to the new minimum.
+            // Also, reset if the total points spent would exceed the point pool due to new costs (e.g., if a custom cost became very high).
+            // This is a robust way to prevent the calculator from getting "stuck" in an invalid state.
+            let currentTotalPoints = 0;
+            let needsReset = false;
+            for (const ab of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+                const cost = getCostForScore(updatedScores[ab]);
+                if (cost === Infinity) { // If any of the scores now has an invalid cost, reset
+                    needsReset = true;
+                    break;
+                }
+                currentTotalPoints += cost;
+            }
+
+            if (currentTotalPoints > pointPool || needsReset) {
+                return {
+                    str: minPurchasableScore, dex: minPurchasableScore, con: minPurchasableScore,
+                    int: minPurchasableScore, wis: minPurchasableScore, cha: minPurchasableScore,
+                };
+            }
+
+
             return changed ? updatedScores : prevScores;
         });
-    }, [minPurchasableScore, maxPurchasableScore]);
+    }, [minPurchasableScore, maxPurchasableScore, pointPool, getCostForScore]);
 
 
     return (
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 md:p-8">
-            <h1 className="text-3xl md:text-4xl font-bold text-center text-indigo-700 dark:text-indigo-400 mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold text-center text-purple-700 dark:text-purple-400 mb-6">
                 D&D 3.5e Point Buy Calculator
             </h1>
 
@@ -194,9 +267,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                 setIsCustomPointPool(false);
                                 setPointPool(parseInt(e.target.value));
                             }
-                            if (calculatedStats.pointsSpent > (parseInt(e.target.value) || 0)) {
-                                 setTargetScores({ str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 });
-                            }
+                            // Reset scores if new pool makes current allocation invalid
+                            // This will be handled by the useEffect above that watches pointPool too.
                         }}
                         className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-indigo-500 focus:border-indigo-500"
                     >
@@ -210,7 +282,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                         <input
                             type="number"
                             value={customPointPoolInput}
-                            onChange={(e) => setCustomPointPoolInput(parseInt(e.target.value) || 0)}
+                            onChange={(e) => handleCustomPointPoolInput(e.target.value)}
                             className="mt-2 w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-indigo-500 focus:border-indigo-500 text-right"
                             placeholder="Enter custom points"
                             min="0"
@@ -264,97 +336,102 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
             {/* Point Buy Rule Selection & Min/Max Purchasable Scores */}
             <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner">
-                <h2 className="text-xl md:text-2xl font-semibold text-center text-indigo-600 dark:text-indigo-300 mb-4">
+                <h2 className="text-xl md:text-2xl font-semibold text-center text-indigo-600 dark:text-indigo-300 mb-4 cursor-pointer" onClick={() => setIsRulesCollapsed(!isRulesCollapsed)}>
                     Point Buy Rules
+                    <span className="ml-2 text-sm">[{isRulesCollapsed ? 'Expand' : 'Collapse'}]</span>
                 </h2>
-                <div className="flex justify-center space-x-4 mb-4">
-                    <label className="inline-flex items-center">
-                        <input
-                            type="radio"
-                            name="pointBuyRule"
-                            value="standard"
-                            checked={!useCustomCosts}
-                            onChange={() => setUseCustomCosts(false)}
-                            className="form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
-                        />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Standard 3.5e Costs</span>
-                    </label>
-                    <label className="inline-flex items-center">
-                        <input
-                            type="radio"
-                            name="pointBuyRule"
-                            value="custom"
-                            checked={useCustomCosts}
-                            onChange={() => setUseCustomCosts(true)}
-                            className="form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
-                        />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Custom Costs</span>
-                    </label>
-                </div>
+                {!isRulesCollapsed && (
+                    <div className="transition-all duration-300 ease-in-out">
+                        <div className="flex justify-center space-x-4 mb-4">
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="radio"
+                                    name="pointBuyRule"
+                                    value="standard"
+                                    checked={!useCustomCosts}
+                                    onChange={() => setUseCustomCosts(false)}
+                                    className="form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
+                                />
+                                <span className="ml-2 text-gray-700 dark:text-gray-300">Standard 3.5e Costs</span>
+                            </label>
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="radio"
+                                    name="pointBuyRule"
+                                    value="custom"
+                                    checked={useCustomCosts}
+                                    onChange={() => setUseCustomCosts(true)}
+                                    className="form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
+                                />
+                                <span className="ml-2 text-gray-700 dark:text-gray-300">Custom Costs</span>
+                            </label>
+                        </div>
 
-                {useCustomCosts && (
-                    <div className="mt-4">
-                        <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
-                            Define Custom Costs (Points required to reach score)
-                        </h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                            {Object.keys(STANDARD_ABILITY_COSTS_3_5E).map(score => (
-                                <div key={score} className="flex items-center justify-between">
-                                    <label htmlFor={`cost-${score}`} className="text-sm font-medium">Score {score}:</label>
+                        {useCustomCosts && (
+                            <div className="mt-4">
+                                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
+                                    Define Custom Costs (Points required to reach score)
+                                </h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                    {Object.keys(STANDARD_ABILITY_COSTS_3_5E).map(score => (
+                                        <div key={score} className="flex items-center justify-between">
+                                            <label htmlFor={`cost-${score}`} className="text-sm font-medium">Score {score}:</label>
+                                            <input
+                                                id={`cost-${score}`}
+                                                type="number"
+                                                value={customAbilityCosts[score]} 
+                                                onChange={(e) => handleCustomCostChange(score, e.target.value)}
+                                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
+                                                min="-20" // Allow negative costs
+                                                max="50" // Allow high costs
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+                                    *These costs are cumulative from score 8. Negative costs mean you gain points for lower scores.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Min/Max Purchasable Scores - Moved inside collapsible section */}
+                        <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
+                            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
+                                Purchasable Score Limits (before racial/template bonuses)
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="minScore35e" className="text-sm font-medium">Minimum Purchasable:</label>
                                     <input
-                                        id={`cost-${score}`}
+                                        id="minScore35e"
                                         type="number"
-                                        value={customAbilityCosts[score]} 
-                                        onChange={(e) => handleCustomCostChange(score, e.target.value)}
+                                        value={minPurchasableScore}
+                                        onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
-                                        min="0"
+                                        min="1" // Absolute min
+                                        max="30" // Absolute max
                                     />
                                 </div>
-                            ))}
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="maxScore35e" className="text-sm font-medium">Maximum Purchasable:</label>
+                                    <input
+                                        id="maxScore35e"
+                                        type="number"
+                                        value={maxPurchasableScore}
+                                        onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)}
+                                        className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
+                                        min="1" // Absolute min
+                                        max="30" // Absolute max
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+                                Set the minimum/maximum base score a player can allocate using points. (Defaults: 8-18)
+                            </p>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
-                            *These costs are cumulative from score 8. For example, if score 14 costs 6 points, and score 15 costs 8 points, entering 8 for score 15 means it costs 2 points to go from 14 to 15.
-                        </p>
                     </div>
                 )}
-
-                {/* Min/Max Purchasable Scores */}
-                <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
-                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
-                        Purchasable Score Limits (before racial/template bonuses)
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex items-center justify-between">
-                            <label htmlFor="minScore35e" className="text-sm font-medium">Minimum Purchasable:</label>
-                            <input
-                                id="minScore35e"
-                                type="number"
-                                value={minPurchasableScore}
-                                onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
-                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
-                                min="1"
-                                max="30" // A broader range for user input flexibility
-                            />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <label htmlFor="maxScore35e" className="text-sm font-medium">Maximum Purchasable:</label>
-                            <input
-                                id="maxScore35e"
-                                type="number"
-                                value={maxPurchasableScore}
-                                onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)}
-                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
-                                min="1"
-                                max="30" // A broader range for user input flexibility
-                            />
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
-                        Set the minimum/maximum base score a player can allocate using points.
-                    </p>
-                </div>
             </div>
-
 
             {/* Ability Score Adjustments */}
             <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner">
@@ -447,7 +524,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                     In D&D 3.5e, the point buy system allows players to customize their character's ability scores by spending a fixed pool of points. All six ability scores (Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma) start at a base of 8. Points are then spent to increase these scores.
                 </p>
                 <p className="mb-2 text-gray-700 dark:text-gray-300">
-                    The cost to increase an ability score is cumulative from 8. Here is the standard cost table:
+                    The cost to increase an ability score is cumulative from 8. Here is the standard cost table (including common house rules for scores below 8):
                 </p>
                 <div className="overflow-x-auto mb-4 inline-block w-full">
                     <table className="mx-auto min-w-max divide-y divide-gray-200 dark:divide-gray-700 rounded-lg overflow-hidden">
@@ -468,7 +545,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                     </table>
                 </div>
                 <p className="text-gray-700 dark:text-gray-300">
-                    The typical range for purchasable attributes is {DEFAULT_MIN_PURCHASABLE_3_5E}-{DEFAULT_MAX_PURCHASABLE_3_5E} before racial modifiers. Common point pools include 15 (low fantasy), 25 (standard), and 32 (high fantasy).
+                    The typical range for purchasable attributes is {DEFAULT_MIN_PURCHASABLE_3_5E}-{DEFAULT_MAX_PURCHASABLE_3_5E} before racial modifiers, but custom limits can be set above. Common point pools include 15 (low fantasy), 25 (standard), and 32 (high fantasy).
                 </p>
                 <div className="mt-4 p-4 bg-red-50 dark:bg-red-900 border-l-4 border-red-500 rounded-lg text-left">
                     <h3 className="text-xl md:text-2xl font-semibold text-red-700 dark:text-red-200 mb-3">
@@ -519,9 +596,12 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
     const [useCustomCosts, setUseCustomCosts] = useState(false);
     const [customAbilityCosts, setCustomAbilityCosts] = useState({ ...STANDARD_ABILITY_COSTS_5E });
 
-    // New states for min/max purchasable scores
+    // States for min/max purchasable scores
     const [minPurchasableScore, setMinPurchasableScore] = useState(DEFAULT_MIN_PURCHASABLE_5E);
     const [maxPurchasableScore, setMaxPurchasableScore] = useState(DEFAULT_MAX_PURCHASABLE_5E);
+
+    // State for collapsing rules section
+    const [isRulesCollapsed, setIsRulesCollapsed] = useState(false);
 
     const [calculatedStats, setCalculatedStats] = useState({
         pointsSpent: 0,
@@ -543,13 +623,23 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         if (activeCosts.hasOwnProperty(score)) {
             return activeCosts[score];
         }
-        return Infinity; // Scores above 15 (or not in table) cannot be bought with standard 5e point buy
+        return Infinity;
     }, [useCustomCosts, customAbilityCosts]);
 
 
     const handleCustomRacialModChange = (ability, value) => {
         setCustomRacialModifiers(prev => ({ ...prev, [ability]: parseInt(value) || 0 }));
     };
+
+    const handleCustomPointPoolInput = (value) => {
+        const parsedValue = parseInt(value);
+        if (!isNaN(parsedValue)) {
+            setCustomPointPoolInput(parsedValue);
+        } else if (value === '') {
+            setCustomPointPoolInput('');
+        }
+    };
+
 
     useEffect(() => {
         if (isCustomPointPool) {
@@ -561,8 +651,6 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         let totalPointsSpent = 0;
         const finalAbilityScores = {};
         const finalAbilityMods = {};
-
-        // Determine base racial modifiers for 5e
         let activeRacialModifiers = {};
         if (selectedRace === 'Custom') {
             activeRacialModifiers = customRacialModifiers;
@@ -570,15 +658,12 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             const baseRaceMod = RACE_MODIFIERS_5E[selectedRace] || {};
             activeRacialModifiers = { ...baseRaceMod };
 
-            // Handle 5e specific 'any' increases (e.g., Human (Variant), Half-Elf)
-            // Ensure selectedAnyIncreases values are valid abilities and not duplicates
             if (activeRacialModifiers.any1 && selectedAnyIncreases.any1) {
                 activeRacialModifiers[selectedAnyIncreases.any1] = (activeRacialModifiers[selectedAnyIncreases.any1] || 0) + 1;
             }
             if (activeRacialModifiers.any2 && selectedAnyIncreases.any2 && selectedAnyIncreases.any2 !== selectedAnyIncreases.any1) {
                 activeRacialModifiers[selectedAnyIncreases.any2] = (activeRacialModifiers[selectedAnyIncreases.any2] || 0) + 1;
             }
-            // Remove 'any' properties so they don't get processed as actual abilities
             delete activeRacialModifiers.any1;
             delete activeRacialModifiers.any2;
         }
@@ -586,8 +671,12 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
         for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
             const currentTargetScore = targetScores[ability];
-            totalPointsSpent += getCostForScore(currentTargetScore);
-            const raceMod = activeRacialModifiers[ability] || 0; // Use calculated activeRacialModifiers
+            const cost = getCostForScore(currentTargetScore);
+            if (cost !== Infinity) {
+                totalPointsSpent += cost;
+            }
+
+            const raceMod = activeRacialModifiers[ability] || 0;
             const finalScore = currentTargetScore + raceMod;
             finalAbilityScores[ability] = finalScore;
             finalAbilityMods[ability] = getAbilityMod(finalScore);
@@ -613,16 +702,25 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             const currentScore = newTargetScores[ability];
             const newScore = currentScore + delta;
 
-            // Apply min/max purchasable limits here based on state
+            // CRITICAL FIX: Apply min/max purchasable limits here based on state
             if (newScore < minPurchasableScore || newScore > maxPurchasableScore) {
                 return prevTargetScores;
             }
 
-            const hypotheticalPointsSpent = Object.keys(newTargetScores).reduce((acc, currentAbility) => {
-                const scoreToCost = (currentAbility === ability) ? newScore : newTargetScores[currentAbility];
+            const costOfNewScore = getCostForScore(newScore);
+            if (costOfNewScore === Infinity) {
+                return prevTargetScores;
+            }
+
+            let hypotheticalPointsSpent = 0;
+            for (const ab of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+                const scoreToCost = (ab === ability) ? newScore : newTargetScores[ab];
                 const cost = getCostForScore(scoreToCost);
-                return acc + cost;
-            }, 0);
+                if (cost === Infinity) {
+                    return prevTargetScores;
+                }
+                hypotheticalPointsSpent += cost;
+            }
 
             if (hypotheticalPointsSpent > pointPool) {
                 return prevTargetScores;
@@ -651,23 +749,59 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
     // Determine if the selected 5e race has 'any' increases (e.g., Human Variant, Half-Elf)
     const currentRaceHasAnyIncreases = (selectedRace === 'Human (Variant)' || selectedRace === 'Half-Elf');
 
-    // Reset scores to minPurchasableScore when min/max change, if current scores are out of bounds
+    // Effect to clamp scores when minPurchasableScore or maxPurchasableScore changes
     useEffect(() => {
         setTargetScores(prevScores => {
             const updatedScores = { ...prevScores };
             let changed = false;
             for (const ability in updatedScores) {
-                if (updatedScores[ability] < minPurchasableScore) {
-                    updatedScores[ability] = minPurchasableScore;
-                    changed = true;
-                } else if (updatedScores[ability] > maxPurchasableScore) {
-                    updatedScores[ability] = maxPurchasableScore;
+                const currentScore = updatedScores[ability];
+                let newScore = currentScore;
+                if (currentScore < minPurchasableScore) {
+                    newScore = minPurchasableScore;
+                } else if (currentScore > maxPurchasableScore) {
+                    newScore = maxPurchasableScore;
+                }
+
+                 if (getCostForScore(newScore) === Infinity) {
+                     // If clamping to a score that has no defined cost, default to 8
+                     newScore = DEFAULT_MIN_PURCHASABLE_5E; // Fallback
+                     if (getCostForScore(newScore) === Infinity || newScore < minPurchasableScore || newScore > maxPurchasableScore) {
+                        const closestValidScore = Object.keys(STANDARD_ABILITY_COSTS_5E)
+                                                .map(Number)
+                                                .filter(s => s >= minPurchasableScore && s <= maxPurchasableScore)
+                                                .sort((a,b) => a - b)[0];
+                        newScore = closestValidScore !== undefined ? closestValidScore : DEFAULT_MIN_PURCHASABLE_5E;
+                     }
+                }
+
+
+                if (newScore !== currentScore) {
+                    updatedScores[ability] = newScore;
                     changed = true;
                 }
             }
+            let currentTotalPoints = 0;
+            let needsReset = false;
+            for (const ab of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+                const cost = getCostForScore(updatedScores[ab]);
+                if (cost === Infinity) {
+                    needsReset = true;
+                    break;
+                }
+                currentTotalPoints += cost;
+            }
+
+            if (currentTotalPoints > pointPool || needsReset) {
+                return {
+                    str: minPurchasableScore, dex: minPurchasableScore, con: minPurchasableScore,
+                    int: minPurchasableScore, wis: minPurchasableScore, cha: minPurchasableScore,
+                };
+            }
+
             return changed ? updatedScores : prevScores;
         });
-    }, [minPurchasableScore, maxPurchasableScore]);
+    }, [minPurchasableScore, maxPurchasableScore, pointPool, getCostForScore]);
 
 
     return (
@@ -693,9 +827,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                 setIsCustomPointPool(false);
                                 setPointPool(parseInt(e.target.value));
                             }
-                            if (calculatedStats.pointsSpent > (parseInt(e.target.value) || 0)) {
-                                 setTargetScores({ str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 });
-                            }
+                            // Reset scores if new pool makes current allocation invalid
+                            // This will be handled by the useEffect above that watches pointPool too.
                         }}
                         className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500"
                     >
@@ -707,7 +840,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                         <input
                             type="number"
                             value={customPointPoolInput}
-                            onChange={(e) => setCustomPointPoolInput(parseInt(e.target.value) || 0)}
+                            onChange={(e) => handleCustomPointPoolInput(e.target.value)}
                             className="mt-2 w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500 text-right"
                             placeholder="Enter custom points"
                             min="0"
@@ -812,100 +945,106 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
             {/* 5e Point Buy Rule Selection & Min/Max Purchasable Scores */}
             <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner">
-                <h2 className="text-xl md:text-2xl font-semibold text-red-600 dark:text-red-300 mb-4">
+                <h2 className="text-xl md:text-2xl font-semibold text-center text-red-600 dark:text-red-300 mb-4 cursor-pointer" onClick={() => setIsRulesCollapsed(!isRulesCollapsed)}>
                     Point Buy Rules
+                    <span className="ml-2 text-sm">[{isRulesCollapsed ? 'Expand' : 'Collapse'}]</span>
                 </h2>
-                <div className="flex justify-center space-x-4 mb-4">
-                    <label className="inline-flex items-center">
-                        <input
-                            type="radio"
-                            name="pointBuyRule5e"
-                            value="standard"
-                            checked={!useCustomCosts}
-                            onChange={() => setUseCustomCosts(false)}
-                            className="form-radio h-4 w-4 text-red-600 transition duration-150 ease-in-out"
-                        />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Standard 5e Costs</span>
-                    </label>
-                    <label className="inline-flex items-center">
-                        <input
-                            type="radio"
-                            name="pointBuyRule5e"
-                            value="custom"
-                            checked={useCustomCosts}
-                            onChange={() => setUseCustomCosts(true)}
-                            className="form-radio h-4 w-4 text-red-600 transition duration-150 ease-in-out"
-                        />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Custom Costs</span>
-                    </label>
-                </div>
+                {!isRulesCollapsed && (
+                    <div className="transition-all duration-300 ease-in-out">
+                        <div className="flex justify-center space-x-4 mb-4">
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="radio"
+                                    name="pointBuyRule5e"
+                                    value="standard"
+                                    checked={!useCustomCosts}
+                                    onChange={() => setUseCustomCosts(false)}
+                                    className="form-radio h-4 w-4 text-red-600 transition duration-150 ease-in-out"
+                                />
+                                <span className="ml-2 text-gray-700 dark:text-gray-300">Standard 5e Costs</span>
+                            </label>
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="radio"
+                                    name="pointBuyRule5e"
+                                    value="custom"
+                                    checked={useCustomCosts}
+                                    onChange={() => setUseCustomCosts(true)}
+                                    className="form-radio h-4 w-4 text-red-600 transition duration-150 ease-in-out"
+                                />
+                                <span className="ml-2 text-gray-700 dark:text-gray-300">Custom Costs</span>
+                            </label>
+                        </div>
 
-                {useCustomCosts && (
-                    <div className="mt-4">
-                        <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
-                            Define Custom Costs (Points required to reach score)
-                        </h3>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                            {Object.keys(STANDARD_ABILITY_COSTS_5E).map(score => (
-                                <div key={score} className="flex items-center justify-between">
-                                    <label htmlFor={`cost-5e-${score}`} className="text-sm font-medium">Score {score}:</label>
+                        {useCustomCosts && (
+                            <div className="mt-4">
+                                <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
+                                    Define Custom Costs (Points required to reach score)
+                                </h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                    {Object.keys(STANDARD_ABILITY_COSTS_5E).map(score => (
+                                        <div key={score} className="flex items-center justify-between">
+                                            <label htmlFor={`cost-5e-${score}`} className="text-sm font-medium">Score {score}:</label>
+                                            <input
+                                                id={`cost-5e-${score}`}
+                                                type="number"
+                                                value={customAbilityCosts[score]} 
+                                                onChange={(e) => handleCustomCostChange(score, e.target.value)}
+                                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
+                                                min="-20" // Allow negative costs
+                                                max="50" // Allow high costs
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+                                    *These costs are cumulative from score 8. Negative costs mean you gain points for lower scores.
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Min/Max Purchasable Scores - Moved inside collapsible section */}
+                        <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
+                            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
+                                Purchasable Score Limits (before racial/template bonuses)
+                            </h3>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="minScore5e" className="text-sm font-medium">Minimum Purchasable:</label>
                                     <input
-                                        id={`cost-5e-${score}`}
+                                        id="minScore5e"
                                         type="number"
-                                        value={customAbilityCosts[score]} 
-                                        onChange={(e) => handleCustomCostChange(score, e.target.value)}
+                                        value={minPurchasableScore}
+                                        onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
-                                        min="0"
+                                        min="1" // Absolute min
+                                        max="30" // Absolute max
                                     />
                                 </div>
-                            ))}
+                                <div className="flex items-center justify-between">
+                                    <label htmlFor="maxScore5e" className="text-sm font-medium">Maximum Purchasable:</label>
+                                    <input
+                                        id="maxScore5e"
+                                        type="number"
+                                        value={maxPurchasableScore}
+                                        onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)}
+                                        className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
+                                        min="1" // Absolute min
+                                        max="30" // Absolute max
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+                                Set the minimum/maximum base score a player can allocate using points. (Defaults: 8-15)
+                            </p>
                         </div>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
-                            *These costs are cumulative from score 8. For example, if score 14 costs 7 points, and score 15 costs 9 points, entering 9 for score 15 means it costs 2 points to go from 14 to 15.
-                        </p>
                     </div>
                 )}
-
-                {/* Min/Max Purchasable Scores */}
-                <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
-                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
-                        Purchasable Score Limits (before racial/template bonuses)
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="flex items-center justify-between">
-                            <label htmlFor="minScore5e" className="text-sm font-medium">Minimum Purchasable:</label>
-                            <input
-                                id="minScore5e"
-                                type="number"
-                                value={minPurchasableScore}
-                                onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
-                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
-                                min="1"
-                                max="30" // A broader range for user input flexibility
-                            />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <label htmlFor="maxScore5e" className="text-sm font-medium">Maximum Purchasable:</label>
-                            <input
-                                id="maxScore5e"
-                                type="number"
-                                value={maxPurchasableScore}
-                                onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)}
-                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
-                                min="1"
-                                max="30" // A broader range for user input flexibility
-                            />
-                        </div>
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
-                        Set the minimum/maximum base score a player can allocate using points.
-                    </p>
-                </div>
             </div>
 
             {/* Ability Score Adjustments */}
             <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner">
-                <h2 className="text-xl md:text-2xl font-semibold text-red-600 dark:text-red-300 mb-4">
+                <h2 className="text-xl md:text-2xl font-semibold text-center text-red-600 dark:text-red-300 mb-4">
                     Allocate Ability Scores
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -1009,7 +1148,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                     In D&D 5e, the standard point buy system typically uses a 27-point pool. Each ability score starts at 8, and points are spent to increase them up to a maximum of 15 before racial bonuses.
                 </p>
                 <p className="mb-2 text-gray-700 dark:text-gray-300">
-                    The cost to increase an ability score from 8 is as follows:
+                    The cost to increase an ability score is cumulative from 8. Here is the standard cost table (including common house rules for scores below 8):
                 </p>
                 <div className="overflow-x-auto mb-4 inline-block w-full">
                     <table className="mx-auto min-w-max divide-y divide-gray-200 dark:divide-gray-700 rounded-lg overflow-hidden">
@@ -1030,14 +1169,14 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                     </table>
                 </div>
                 <p className="text-gray-700 dark:text-gray-300">
-                    After point buy, racial ability score increases are applied. For races like Human (Variant) or Half-Elf, you may choose where to apply certain bonuses.
+                    The typical range for purchasable attributes is {DEFAULT_MIN_PURCHASABLE_5E}-{DEFAULT_MAX_PURCHASABLE_5E} before racial modifiers, but custom limits can be set above.
                 </p>
                 <div className="mt-4 p-4 bg-red-50 dark:bg-red-900 border-l-4 border-red-500 rounded-lg text-left">
                     <h3 className="text-xl md:text-2xl font-semibold text-red-700 dark:text-red-200 mb-3">
                         Important: Discuss with Your Game Master!
                     </h3>
                     <p className="text-red-600 dark:text-red-300">
-                        Any deviation from the standard point buy rules (such as using custom point pools or non-standard racial adjustments) should always be discussed and agreed upon with your Game Master or Storyteller. These decisions are crucial for maintaining the balance and integrity of your campaign.
+                        Any deviation from the standard point buy rules (such as using custom point costs, a different total point pool, or non-standard minimum/maximum purchasable attributes) should always be discussed and agreed upon with your Game Master or Storyteller. These decisions are crucial for maintaining the balance and integrity of your campaign.
                     </p>
                 </div>
                 <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a>.</p>
@@ -1078,8 +1217,8 @@ const App = () => {
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 font-inter">
             <div className="max-w-4xl mx-auto">
-                {/* Main Heading for the entire application */}
-                <h1 className="text-4xl md:text-5xl font-extrabold text-center text-purple-700 dark:text-purple-400 mb-8">
+                {/* Main Heading for the entire application - Adjusted size */}
+                <h1 className="text-3xl md:text-4xl font-extrabold text-center text-purple-700 dark:text-purple-400 mb-8">
                     RPG Calculator presented by <a href={discordInviteLink} target="_blank" rel="noopener noreferrer" className="text-purple-700 dark:text-purple-400 hover:underline">MFD9K Discord</a>
                 </h1>
 
