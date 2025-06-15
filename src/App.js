@@ -118,7 +118,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         }
     }, [isCustomPointPool, customPointPoolInput, setPointPool]);
 
-    const calculateAllStats = () => {
+    // Re-wrapped in useCallback to fix ESLint warning
+    const calculateAllStats = useCallback(() => {
         let totalPointsSpent = 0;
         const finalAbilityScores = {};
         const finalAbilityMods = {};
@@ -145,11 +146,12 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             finalAbilityScores: finalAbilityScores,
             finalAbilityMods: finalAbilityMods,
         });
-    };
+    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore]); // Dependencies for useCallback
+
 
     useEffect(() => {
         calculateAllStats();
-    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore]);
+    }, [calculateAllStats]); // Now just depends on calculateAllStats
 
 
     const adjustScore = (ability, delta) => {
@@ -220,7 +222,6 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
                 // Ensure the clamped score also has a defined cost. If not, reset to a safe default
                 if (getCostForScore(newScore) === Infinity) {
-                    // Try to set it to the minPurchasableScore if it's a valid cost, otherwise default
                     const minCostDefinedScore = ALL_POSSIBLE_SCORES
                                                     .filter(s => s >= minPurchasableScore && s <= maxPurchasableScore && getCostForScore(s) !== Infinity)
                                                     .sort((a,b) => a - b)[0];
@@ -248,7 +249,6 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
             if (currentTotalPoints > pointPool || needsReset) {
                 const resetValue = minPurchasableScore || DEFAULT_MIN_PURCHASABLE_3_5E; // Use default if min isn't set yet
-                // Ensure resetValue itself has a defined cost or use 8 as fallback
                 const safeResetValue = getCostForScore(resetValue) !== Infinity ? resetValue : DEFAULT_MIN_PURCHASABLE_3_5E;
                 return {
                     str: safeResetValue, dex: safeResetValue, con: safeResetValue,
@@ -677,7 +677,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         }
     }, [isCustomPointPool, customPointPoolInput, setPointPool]);
 
-    const calculateAllStats = () => {
+    // Re-wrapped in useCallback to fix ESLint warning
+    const calculateAllStats = useCallback(() => {
         let totalPointsSpent = 0;
         const finalAbilityScores = {};
         const finalAbilityMods = {};
@@ -718,11 +719,12 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             finalAbilityScores: finalAbilityScores,
             finalAbilityMods: finalAbilityMods,
         });
-    };
+    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore, selectedAnyIncreases]); // Dependencies for useCallback
+
 
     useEffect(() => {
         calculateAllStats();
-    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore, selectedAnyIncreases]);
+    }, [calculateAllStats]); // Now just depends on calculateAllStats
 
 
     const adjustScore = (ability, delta) => {
