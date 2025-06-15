@@ -66,21 +66,21 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
     });
     const [useCustomCosts, setUseCustomCosts] = useState(false);
     const [customAbilityCosts, setCustomAbilityCosts] = useState(() => {
-        // Initialize custom costs with all scores from 2-20, or copy standard if available
         const initialCosts = {};
         for (const score of ALL_POSSIBLE_SCORES) {
             initialCosts[score] = STANDARD_ABILITY_COSTS_3_5E.hasOwnProperty(score) ? STANDARD_ABILITY_COSTS_3_5E[score] : 0;
         }
         return initialCosts;
     });
+    const [allowNegativeCosts, setAllowNegativeCosts] = useState(true); 
 
     // States for min/max purchasable scores
     const [minPurchasableScore, setMinPurchasableScore] = useState(DEFAULT_MIN_PURCHASABLE_3_5E);
     const [maxPurchasableScore, setMaxPurchasableScore] = useState(DEFAULT_MAX_PURCHASABLE_3_5E);
 
-    // State for collapsing rules sections
-    const [isRulesCollapsed, setIsRulesCollapsed] = useState(false); // For point buy settings
-    const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(false); // For rules description at bottom
+    // MODIFIED: Collapsible rules sections now start hidden (true)
+    const [isRulesCollapsed, setIsRulesCollapsed] = useState(true); // For point buy settings
+    const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(true); // For rules description at bottom
 
 
     const [calculatedStats, setCalculatedStats] = useState({
@@ -92,12 +92,18 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
     const getCostForScore = useCallback((score) => {
         const activeCosts = useCustomCosts ? customAbilityCosts : STANDARD_ABILITY_COSTS_3_5E;
-        // If score is outside the explicitly defined costs (2-20), it's unpurchasable via point buy
-        if (score < 2 || score > 20 || !activeCosts.hasOwnProperty(score)) { // Ensure it's within our max defined range
-            return Infinity;
+        
+        if (score < 2 || score > 20 || !activeCosts.hasOwnProperty(score)) {
+            return Infinity; 
         }
-        return activeCosts[score];
-    }, [useCustomCosts, customAbilityCosts]);
+
+        let cost = activeCosts[score];
+        
+        if (!allowNegativeCosts && score < 8 && cost < 0) {
+            cost = 0; 
+        }
+        return cost;
+    }, [useCustomCosts, customAbilityCosts, allowNegativeCosts]);
 
     const handleCustomRacialModChange = (ability, value) => {
         setCustomRacialModifiers(prev => ({ ...prev, [ability]: parseInt(value) || 0 }));
@@ -118,7 +124,6 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         }
     }, [isCustomPointPool, customPointPoolInput, setPointPool]);
 
-    // Re-wrapped in useCallback to fix ESLint warning
     const calculateAllStats = useCallback(() => {
         let totalPointsSpent = 0;
         const finalAbilityScores = {};
@@ -146,12 +151,11 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             finalAbilityScores: finalAbilityScores,
             finalAbilityMods: finalAbilityMods,
         });
-    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore]); // Dependencies for useCallback
-
+    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore]);
 
     useEffect(() => {
         calculateAllStats();
-    }, [calculateAllStats]); // Now just depends on calculateAllStats
+    }, [calculateAllStats]);
 
 
     const adjustScore = (ability, delta) => {
@@ -160,29 +164,25 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             const currentScore = newTargetScores[ability];
             const newScore = currentScore + delta;
 
-            // Apply min/max purchasable limits here based on state
             if (newScore < minPurchasableScore || newScore > maxPurchasableScore) {
                 return prevTargetScores; 
             }
 
-            // Ensure the new score has a defined cost before allowing the change
             const costOfNewScore = getCostForScore(newScore);
             if (costOfNewScore === Infinity) {
-                return prevTargetScores; // If the target score has no defined cost, it's invalid
+                return prevTargetScores;
             }
 
-            // Calculate hypothetical total points spent with the new score
             let hypotheticalPointsSpent = 0;
             for (const ab of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
                 const scoreToCost = (ab === ability) ? newScore : newTargetScores[ab];
                 const cost = getCostForScore(scoreToCost);
-                if (cost === Infinity) { // If any score in the hypothetical set is invalid, break
+                if (cost === Infinity) { 
                     return prevTargetScores;
                 }
                 hypotheticalPointsSpent += cost;
             }
 
-            // Check if the hypothetical total points exceed the pool
             if (hypotheticalPointsSpent > pointPool) {
                 return prevTargetScores;
             }
@@ -198,7 +198,6 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
     const handleMinMaxChange = (setter, value) => {
         const parsedValue = parseInt(value);
-        // Allow empty string to clear input, but enforce reasonable bounds for numbers
         if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) {
             setter(parsedValue);
         } else if (value === '') {
@@ -206,7 +205,6 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         }
     };
 
-    // Effect to clamp scores when minPurchasableScore or maxPurchasableScore changes
     useEffect(() => {
         setTargetScores(prevScores => {
             const updatedScores = { ...prevScores };
@@ -220,7 +218,6 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                     newScore = maxPurchasableScore;
                 }
 
-                // Ensure the clamped score also has a defined cost. If not, reset to a safe default
                 if (getCostForScore(newScore) === Infinity) {
                     const minCostDefinedScore = ALL_POSSIBLE_SCORES
                                                     .filter(s => s >= minPurchasableScore && s <= maxPurchasableScore && getCostForScore(s) !== Infinity)
@@ -234,13 +231,11 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                     changed = true;
                 }
             }
-            // Additional check: If changing min/max or point pool makes the current allocation
-            // exceed the point pool or have invalid costs, reset all scores to the new min.
             let currentTotalPoints = 0;
             let needsReset = false;
             for (const ab of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
                 const cost = getCostForScore(updatedScores[ab]);
-                if (cost === Infinity) { // If any of the scores now has an invalid cost, reset
+                if (cost === Infinity) {
                     needsReset = true;
                     break;
                 }
@@ -248,7 +243,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             }
 
             if (currentTotalPoints > pointPool || needsReset) {
-                const resetValue = minPurchasableScore || DEFAULT_MIN_PURCHASABLE_3_5E; // Use default if min isn't set yet
+                const resetValue = minPurchasableScore || DEFAULT_MIN_PURCHASABLE_3_5E;
                 const safeResetValue = getCostForScore(resetValue) !== Infinity ? resetValue : DEFAULT_MIN_PURCHASABLE_3_5E;
                 return {
                     str: safeResetValue, dex: safeResetValue, con: safeResetValue,
@@ -382,6 +377,21 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                 <span className="ml-2 text-gray-700 dark:text-gray-300">Custom Costs</span>
                             </label>
                         </div>
+                        
+                        {/* Toggle for Negative Costs */}
+                        <div className="mt-4 flex justify-center">
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={allowNegativeCosts}
+                                    onChange={(e) => setAllowNegativeCosts(e.target.checked)}
+                                    className="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
+                                />
+                                <span className="ml-2 text-gray-700 dark:text-gray-300">
+                                    Allow Negative Point Costs (scores &lt; 8 refund points)
+                                </span>
+                            </label>
+                        </div>
 
                         {useCustomCosts && (
                             <div className="mt-4">
@@ -389,7 +399,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                     Define Custom Costs (Points required to reach score)
                                 </h3>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                    {ALL_POSSIBLE_SCORES.map(score => ( // Loop over ALL_POSSIBLE_SCORES
+                                    {ALL_POSSIBLE_SCORES.map(score => (
                                         <div key={score} className="flex items-center justify-between">
                                             <label htmlFor={`cost-${score}`} className="text-sm font-medium">Score {score}:</label>
                                             <input
@@ -398,8 +408,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                                 value={customAbilityCosts[score]} 
                                                 onChange={(e) => handleCustomCostChange(score, e.target.value)}
                                                 className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
-                                                min="-100" // Allow very large negative costs for extreme customization
-                                                max="200" // Allow very large positive costs
+                                                min="-100" 
+                                                max="200" 
                                             />
                                         </div>
                                     ))}
@@ -424,8 +434,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                         value={minPurchasableScore}
                                         onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
-                                        min="1" // Absolute min
-                                        max="30" // Absolute max
+                                        min="1" 
+                                        max="30" 
                                     />
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -436,8 +446,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                         value={maxPurchasableScore}
                                         onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)}
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
-                                        min="1" // Absolute min
-                                        max="30" // Absolute max
+                                        min="1" 
+                                        max="30" 
                                     />
                                 </div>
                             </div>
@@ -557,7 +567,10 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                     {Object.entries(STANDARD_ABILITY_COSTS_3_5E).map(([score, cost]) => (
                                         <tr key={score}>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{score}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{cost}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                                                {/* Display 0 if negative costs are disallowed and cost is negative */}
+                                                {!allowNegativeCosts && cost < 0 ? 0 : cost}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -616,21 +629,21 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
     });
     const [useCustomCosts, setUseCustomCosts] = useState(false);
     const [customAbilityCosts, setCustomAbilityCosts] = useState(() => {
-        // Initialize custom costs with all scores from 2-20, or copy standard if available
         const initialCosts = {};
         for (const score of ALL_POSSIBLE_SCORES) {
             initialCosts[score] = STANDARD_ABILITY_COSTS_5E.hasOwnProperty(score) ? STANDARD_ABILITY_COSTS_5E[score] : 0;
         }
         return initialCosts;
     });
+    const [allowNegativeCosts, setAllowNegativeCosts] = useState(true);
 
     // States for min/max purchasable scores
     const [minPurchasableScore, setMinPurchasableScore] = useState(DEFAULT_MIN_PURCHASABLE_5E);
     const [maxPurchasableScore, setMaxPurchasableScore] = useState(DEFAULT_MAX_PURCHASABLE_5E);
 
-    // State for collapsing rules sections
-    const [isRulesCollapsed, setIsRulesCollapsed] = useState(false); // For point buy settings
-    const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(false); // For rules description at bottom
+    // MODIFIED: Collapsible rules sections now start hidden (true)
+    const [isRulesCollapsed, setIsRulesCollapsed] = useState(true); // For point buy settings
+    const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(true); // For rules description at bottom
 
 
     const [calculatedStats, setCalculatedStats] = useState({
@@ -650,11 +663,17 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
     const getCostForScore = useCallback((score) => {
         const activeCosts = useCustomCosts ? customAbilityCosts : STANDARD_ABILITY_COSTS_5E;
-        if (score < 2 || score > 20 || !activeCosts.hasOwnProperty(score)) { // Ensure it's within our max defined range
+        if (score < 2 || score > 20 || !activeCosts.hasOwnProperty(score)) {
             return Infinity;
         }
-        return activeCosts[score];
-    }, [useCustomCosts, customAbilityCosts]);
+
+        let cost = activeCosts[score];
+
+        if (!allowNegativeCosts && score < 8 && cost < 0) {
+            cost = 0;
+        }
+        return cost;
+    }, [useCustomCosts, customAbilityCosts, allowNegativeCosts]);
 
 
     const handleCustomRacialModChange = (ability, value) => {
@@ -677,7 +696,6 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         }
     }, [isCustomPointPool, customPointPoolInput, setPointPool]);
 
-    // Re-wrapped in useCallback to fix ESLint warning
     const calculateAllStats = useCallback(() => {
         let totalPointsSpent = 0;
         const finalAbilityScores = {};
@@ -719,12 +737,12 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             finalAbilityScores: finalAbilityScores,
             finalAbilityMods: finalAbilityMods,
         });
-    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore, selectedAnyIncreases]); // Dependencies for useCallback
+    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore, selectedAnyIncreases]);
 
 
     useEffect(() => {
         calculateAllStats();
-    }, [calculateAllStats]); // Now just depends on calculateAllStats
+    }, [calculateAllStats]);
 
 
     const adjustScore = (ability, delta) => {
@@ -767,7 +785,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
     const handleMinMaxChange = (setter, value) => {
         const parsedValue = parseInt(value);
-        if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) { // Keep a reasonable hard cap
+        if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) {
             setter(parsedValue);
         } else if (value === '') {
             setter('');
@@ -779,7 +797,6 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
     // Determine if the selected 5e race has 'any' increases (e.g., Human Variant, Half-Elf)
     const currentRaceHasAnyIncreases = (selectedRace === 'Human (Variant)' || selectedRace === 'Half-Elf');
 
-    // Effect to clamp scores when minPurchasableScore or maxPurchasableScore changes
     useEffect(() => {
         setTargetScores(prevScores => {
             const updatedScores = { ...prevScores };
@@ -1001,13 +1018,28 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                             </label>
                         </div>
 
+                        {/* Toggle for Negative Costs */}
+                        <div className="mt-4 flex justify-center">
+                            <label className="inline-flex items-center">
+                                <input
+                                    type="checkbox"
+                                    checked={allowNegativeCosts}
+                                    onChange={(e) => setAllowNegativeCosts(e.target.checked)}
+                                    className="form-checkbox h-4 w-4 text-red-600 transition duration-150 ease-in-out"
+                                />
+                                <span className="ml-2 text-gray-700 dark:text-gray-300">
+                                    Allow Negative Point Costs (scores &lt; 8 refund points)
+                                </span>
+                            </label>
+                        </div>
+
                         {useCustomCosts && (
                             <div className="mt-4">
                                 <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
                                     Define Custom Costs (Points required to reach score)
                                 </h3>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                    {ALL_POSSIBLE_SCORES.map(score => ( // Loop over ALL_POSSIBLE_SCORES
+                                    {ALL_POSSIBLE_SCORES.map(score => (
                                         <div key={score} className="flex items-center justify-between">
                                             <label htmlFor={`cost-5e-${score}`} className="text-sm font-medium">Score {score}:</label>
                                             <input
@@ -1016,8 +1048,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                                 value={customAbilityCosts[score]} 
                                                 onChange={(e) => handleCustomCostChange(score, e.target.value)}
                                                 className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
-                                                min="-100" // Allow very large negative costs for extreme customization
-                                                max="200" // Allow very large positive costs
+                                                min="-100" 
+                                                max="200" 
                                             />
                                         </div>
                                     ))}
@@ -1040,10 +1072,10 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                         id="minScore5e"
                                         type="number"
                                         value={minPurchasableScore}
-                                        onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
+                                        onChange={(e) => handleMinMaxChange(setter, e.target.value)}
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
-                                        min="1" // Absolute min
-                                        max="30" // Absolute max
+                                        min="1" 
+                                        max="30" 
                                     />
                                 </div>
                                 <div className="flex items-center justify-between">
@@ -1052,10 +1084,10 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                         id="maxScore5e"
                                         type="number"
                                         value={maxPurchasableScore}
-                                        onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)}
+                                        onChange={(e) => handleMinMaxChange(setter, e.target.value)}
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
-                                        min="1" // Absolute min
-                                        max="30" // Absolute max
+                                        min="1" 
+                                        max="30" 
                                     />
                                 </div>
                             </div>
@@ -1190,7 +1222,10 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                     {Object.entries(STANDARD_ABILITY_COSTS_5E).map(([score, cost]) => (
                                         <tr key={score}>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{score}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{cost}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                                                {/* Display 0 if negative costs are disallowed and cost is negative */}
+                                                {!allowNegativeCosts && cost < 0 ? 0 : cost}
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
