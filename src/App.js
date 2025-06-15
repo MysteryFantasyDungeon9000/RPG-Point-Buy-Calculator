@@ -13,6 +13,8 @@ const RACE_MODIFIERS_3_5E = {
     'Halfling': { dex: 2, str: -2 }, 'Custom': {},
 };
 const INITIAL_POINT_POOL_3_5E = 25;
+const DEFAULT_MIN_PURCHASABLE_3_5E = 8;
+const DEFAULT_MAX_PURCHASABLE_3_5E = 18;
 
 // --- D&D 5e Specific Constants ---
 const STANDARD_ABILITY_COSTS_5E = {
@@ -33,10 +35,12 @@ const RACE_MODIFIERS_5E = {
     'Custom': {},
 };
 const INITIAL_POINT_POOL_5E = 27;
+const DEFAULT_MIN_PURCHASABLE_5E = 8;
+const DEFAULT_MAX_PURCHASABLE_5E = 15;
 
 
 // --- Dnd35eCalculator Component ---
-const Dnd35eCalculator = ({ discordLink }) => {
+const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
     const [pointPool, setPointPool] = useState(INITIAL_POINT_POOL_3_5E);
     const [customPointPoolInput, setCustomPointPoolInput] = useState(INITIAL_POINT_POOL_3_5E);
     const [isCustomPointPool, setIsCustomPointPool] = useState(false);
@@ -49,6 +53,12 @@ const Dnd35eCalculator = ({ discordLink }) => {
     });
     const [useCustomCosts, setUseCustomCosts] = useState(false);
     const [customAbilityCosts, setCustomAbilityCosts] = useState({ ...STANDARD_ABILITY_COSTS_3_5E });
+
+    // New states for min/max purchasable scores
+    const [minPurchasableScore, setMinPurchasableScore] = useState(DEFAULT_MIN_PURCHASABLE_3_5E);
+    const [maxPurchasableScore, setMaxPurchasableScore] = useState(DEFAULT_MAX_PURCHASABLE_3_5E);
+
+
     const [calculatedStats, setCalculatedStats] = useState({
         pointsSpent: 0,
         remainingPoints: INITIAL_POINT_POOL_3_5E,
@@ -108,7 +118,12 @@ const Dnd35eCalculator = ({ discordLink }) => {
             const newTargetScores = { ...prevTargetScores };
             const currentScore = newTargetScores[ability];
             const newScore = currentScore + delta;
-            if (newScore < 8 || newScore > 18) return prevTargetScores; // 3.5e cap 8-18
+
+            // Apply min/max purchasable limits here based on state
+            if (newScore < minPurchasableScore || newScore > maxPurchasableScore) {
+                return prevTargetScores;
+            }
+
             const hypotheticalPointsSpent = Object.keys(newTargetScores).reduce((acc, currentAbility) => {
                 const scoreToCost = (currentAbility === ability) ? newScore : newTargetScores[currentAbility];
                 const cost = getCostForScore(scoreToCost);
@@ -123,6 +138,38 @@ const Dnd35eCalculator = ({ discordLink }) => {
     const handleCustomCostChange = (score, value) => {
         setCustomAbilityCosts(prev => ({ ...prev, [score]: parseInt(value) || 0 }));
     };
+
+    const handleMinMaxChange = (setter, value) => {
+        const parsedValue = parseInt(value);
+        // Ensure it's a number and within a reasonable absolute range (e.g., 1-30, not typical but prevents craziness)
+        if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) {
+            setter(parsedValue);
+            // After changing min/max, it's good practice to ensure current scores still comply
+            // For simplicity here, we let the next adjustment or user reset handle invalid states.
+            // A more complex solution would force scores back into range here.
+        } else if (value === '') { // Allow clearing the input for partial entry
+            setter(''); // Set to empty string to allow user to type
+        }
+    };
+
+    // Reset scores to minPurchasableScore when min/max change, if current scores are out of bounds
+    useEffect(() => {
+        setTargetScores(prevScores => {
+            const updatedScores = { ...prevScores };
+            let changed = false;
+            for (const ability in updatedScores) {
+                if (updatedScores[ability] < minPurchasableScore) {
+                    updatedScores[ability] = minPurchasableScore;
+                    changed = true;
+                } else if (updatedScores[ability] > maxPurchasableScore) {
+                    updatedScores[ability] = maxPurchasableScore;
+                    changed = true;
+                }
+            }
+            return changed ? updatedScores : prevScores;
+        });
+    }, [minPurchasableScore, maxPurchasableScore]);
+
 
     return (
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 md:p-8">
@@ -215,7 +262,7 @@ const Dnd35eCalculator = ({ discordLink }) => {
                 </div>
             )}
 
-            {/* Point Buy Rule Selection */}
+            {/* Point Buy Rule Selection & Min/Max Purchasable Scores */}
             <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner">
                 <h2 className="text-xl md:text-2xl font-semibold text-center text-indigo-600 dark:text-indigo-300 mb-4">
                     Point Buy Rules
@@ -230,7 +277,7 @@ const Dnd35eCalculator = ({ discordLink }) => {
                             onChange={() => setUseCustomCosts(false)}
                             className="form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
                         />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Standard 3.5e Rules</span>
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Standard 3.5e Costs</span>
                     </label>
                     <label className="inline-flex items-center">
                         <input
@@ -241,7 +288,7 @@ const Dnd35eCalculator = ({ discordLink }) => {
                             onChange={() => setUseCustomCosts(true)}
                             className="form-radio h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
                         />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Custom Rules</span>
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Custom Costs</span>
                     </label>
                 </div>
 
@@ -270,7 +317,44 @@ const Dnd35eCalculator = ({ discordLink }) => {
                         </p>
                     </div>
                 )}
+
+                {/* Min/Max Purchasable Scores */}
+                <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
+                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
+                        Purchasable Score Limits (before racial/template bonuses)
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex items-center justify-between">
+                            <label htmlFor="minScore35e" className="text-sm font-medium">Minimum Purchasable:</label>
+                            <input
+                                id="minScore35e"
+                                type="number"
+                                value={minPurchasableScore}
+                                onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
+                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
+                                min="1"
+                                max="30" // A broader range for user input flexibility
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <label htmlFor="maxScore35e" className="text-sm font-medium">Maximum Purchasable:</label>
+                            <input
+                                id="maxScore35e"
+                                type="number"
+                                value={maxPurchasableScore}
+                                onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)}
+                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
+                                min="1"
+                                max="30" // A broader range for user input flexibility
+                            />
+                        </div>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+                        Set the minimum/maximum base score a player can allocate using points.
+                    </p>
+                </div>
             </div>
+
 
             {/* Ability Score Adjustments */}
             <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner">
@@ -365,8 +449,8 @@ const Dnd35eCalculator = ({ discordLink }) => {
                 <p className="mb-2 text-gray-700 dark:text-gray-300">
                     The cost to increase an ability score is cumulative from 8. Here is the standard cost table:
                 </p>
-                <div className="overflow-x-auto mb-4 inline-block w-full"> {/* Added inline-block and w-full for centering and full width */}
-                    <table className="mx-auto min-w-max divide-y divide-gray-200 dark:divide-gray-700 rounded-lg overflow-hidden"> {/* Added mx-auto and min-w-max */}
+                <div className="overflow-x-auto mb-4 inline-block w-full">
+                    <table className="mx-auto min-w-max divide-y divide-gray-200 dark:divide-gray-700 rounded-lg overflow-hidden">
                         <thead className="bg-gray-100 dark:bg-gray-700">
                             <tr>
                                 <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Score</th>
@@ -384,7 +468,7 @@ const Dnd35eCalculator = ({ discordLink }) => {
                     </table>
                 </div>
                 <p className="text-gray-700 dark:text-gray-300">
-                    The typical range for purchasable attributes is 8-18 before racial modifiers. Common point pools include 15 (low fantasy), 25 (standard), and 32 (high fantasy).
+                    The typical range for purchasable attributes is {DEFAULT_MIN_PURCHASABLE_3_5E}-{DEFAULT_MAX_PURCHASABLE_3_5E} before racial modifiers. Common point pools include 15 (low fantasy), 25 (standard), and 32 (high fantasy).
                 </p>
                 <div className="mt-4 p-4 bg-red-50 dark:bg-red-900 border-l-4 border-red-500 rounded-lg text-left">
                     <h3 className="text-xl md:text-2xl font-semibold text-red-700 dark:text-red-200 mb-3">
@@ -396,6 +480,23 @@ const Dnd35eCalculator = ({ discordLink }) => {
                 </div>
                 <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a>.</p>
                 <p className="mt-2">Join our community on Discord: <a href={discordLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Mystery Fantasy Dungeon 9000</a></p>
+                {paypalLink && cashappLink && (
+                    <div className="mt-4 p-3 bg-green-50 dark:bg-green-900 rounded-lg text-center">
+                        <p className="text-sm font-medium text-green-700 dark:text-green-200 mb-2">Enjoying the calculator? Consider supporting its development!</p>
+                        <div className="flex justify-center space-x-4">
+                            {paypalLink && (
+                                <a href={paypalLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline font-bold">
+                                    Support via PayPal
+                                </a>
+                            )}
+                            {cashappLink && (
+                                <a href={cashappLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline font-bold">
+                                    Support via Cash App
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -403,7 +504,7 @@ const Dnd35eCalculator = ({ discordLink }) => {
 
 
 // --- Dnd5eCalculator Component ---
-const Dnd5eCalculator = ({ discordLink }) => {
+const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
     // 5e specific states and logic
     const [pointPool, setPointPool] = useState(INITIAL_POINT_POOL_5E); // 5e standard is 27
     const [customPointPoolInput, setCustomPointPoolInput] = useState(INITIAL_POINT_POOL_5E);
@@ -415,10 +516,12 @@ const Dnd5eCalculator = ({ discordLink }) => {
     const [customRacialModifiers, setCustomRacialModifiers] = useState({
         str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0,
     });
-    // 5e doesn't typically use custom point costs for individual scores in the same way 3.5e does for core rules,
-    // but the framework is here if needed. For now, it will default to false.
     const [useCustomCosts, setUseCustomCosts] = useState(false);
     const [customAbilityCosts, setCustomAbilityCosts] = useState({ ...STANDARD_ABILITY_COSTS_5E });
+
+    // New states for min/max purchasable scores
+    const [minPurchasableScore, setMinPurchasableScore] = useState(DEFAULT_MIN_PURCHASABLE_5E);
+    const [maxPurchasableScore, setMaxPurchasableScore] = useState(DEFAULT_MAX_PURCHASABLE_5E);
 
     const [calculatedStats, setCalculatedStats] = useState({
         pointsSpent: 0,
@@ -468,15 +571,12 @@ const Dnd5eCalculator = ({ discordLink }) => {
             activeRacialModifiers = { ...baseRaceMod };
 
             // Handle 5e specific 'any' increases (e.g., Human (Variant), Half-Elf)
-            if (activeRacialModifiers.any1) {
-                if (selectedAnyIncreases.any1 && activeRacialModifiers[selectedAnyIncreases.any1] === undefined) {
-                    activeRacialModifiers[selectedAnyIncreases.any1] = (activeRacialModifiers[selectedAnyIncreases.any1] || 0) + 1;
-                }
+            // Ensure selectedAnyIncreases values are valid abilities and not duplicates
+            if (activeRacialModifiers.any1 && selectedAnyIncreases.any1) {
+                activeRacialModifiers[selectedAnyIncreases.any1] = (activeRacialModifiers[selectedAnyIncreases.any1] || 0) + 1;
             }
-            if (activeRacialModifiers.any2) {
-                if (selectedAnyIncreases.any2 && activeRacialModifiers[selectedAnyIncreases.any2] === undefined) {
-                    activeRacialModifiers[selectedAnyIncreases.any2] = (activeRacialModifiers[selectedAnyIncreases.any2] || 0) + 1;
-                }
+            if (activeRacialModifiers.any2 && selectedAnyIncreases.any2 && selectedAnyIncreases.any2 !== selectedAnyIncreases.any1) {
+                activeRacialModifiers[selectedAnyIncreases.any2] = (activeRacialModifiers[selectedAnyIncreases.any2] || 0) + 1;
             }
             // Remove 'any' properties so they don't get processed as actual abilities
             delete activeRacialModifiers.any1;
@@ -513,8 +613,10 @@ const Dnd5eCalculator = ({ discordLink }) => {
             const currentScore = newTargetScores[ability];
             const newScore = currentScore + delta;
 
-            // 5e point buy typically limits initial scores to 8-15
-            if (newScore < 8 || newScore > 15) return prevTargetScores; 
+            // Apply min/max purchasable limits here based on state
+            if (newScore < minPurchasableScore || newScore > maxPurchasableScore) {
+                return prevTargetScores;
+            }
 
             const hypotheticalPointsSpent = Object.keys(newTargetScores).reduce((acc, currentAbility) => {
                 const scoreToCost = (currentAbility === ability) ? newScore : newTargetScores[currentAbility];
@@ -535,10 +637,37 @@ const Dnd5eCalculator = ({ discordLink }) => {
         setCustomAbilityCosts(prev => ({ ...prev, [score]: parseInt(value) || 0 }));
     };
 
+    const handleMinMaxChange = (setter, value) => {
+        const parsedValue = parseInt(value);
+        if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) { // Keep a reasonable hard cap
+            setter(parsedValue);
+        } else if (value === '') {
+            setter('');
+        }
+    };
+
     const abilities = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 
     // Determine if the selected 5e race has 'any' increases (e.g., Human Variant, Half-Elf)
     const currentRaceHasAnyIncreases = (selectedRace === 'Human (Variant)' || selectedRace === 'Half-Elf');
+
+    // Reset scores to minPurchasableScore when min/max change, if current scores are out of bounds
+    useEffect(() => {
+        setTargetScores(prevScores => {
+            const updatedScores = { ...prevScores };
+            let changed = false;
+            for (const ability in updatedScores) {
+                if (updatedScores[ability] < minPurchasableScore) {
+                    updatedScores[ability] = minPurchasableScore;
+                    changed = true;
+                } else if (updatedScores[ability] > maxPurchasableScore) {
+                    updatedScores[ability] = maxPurchasableScore;
+                    changed = true;
+                }
+            }
+            return changed ? updatedScores : prevScores;
+        });
+    }, [minPurchasableScore, maxPurchasableScore]);
 
 
     return (
@@ -681,8 +810,7 @@ const Dnd5eCalculator = ({ discordLink }) => {
                 </div>
             )}
 
-            {/* 5e Point Buy Rule Selection (Less prominent as 5e doesn't often vary costs) */}
-            {/* Keeping the custom cost toggle for flexibility, but it's often not used in 5e */}
+            {/* 5e Point Buy Rule Selection & Min/Max Purchasable Scores */}
             <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner">
                 <h2 className="text-xl md:text-2xl font-semibold text-red-600 dark:text-red-300 mb-4">
                     Point Buy Rules
@@ -697,7 +825,7 @@ const Dnd5eCalculator = ({ discordLink }) => {
                             onChange={() => setUseCustomCosts(false)}
                             className="form-radio h-4 w-4 text-red-600 transition duration-150 ease-in-out"
                         />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Standard 5e Rules</span>
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Standard 5e Costs</span>
                     </label>
                     <label className="inline-flex items-center">
                         <input
@@ -708,7 +836,7 @@ const Dnd5eCalculator = ({ discordLink }) => {
                             onChange={() => setUseCustomCosts(true)}
                             className="form-radio h-4 w-4 text-red-600 transition duration-150 ease-in-out"
                         />
-                        <span className="ml-2 text-gray-700 dark:text-gray-300">Custom Rules</span>
+                        <span className="ml-2 text-gray-700 dark:text-gray-300">Custom Costs</span>
                     </label>
                 </div>
 
@@ -737,6 +865,42 @@ const Dnd5eCalculator = ({ discordLink }) => {
                         </p>
                     </div>
                 )}
+
+                {/* Min/Max Purchasable Scores */}
+                <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
+                    <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
+                        Purchasable Score Limits (before racial/template bonuses)
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex items-center justify-between">
+                            <label htmlFor="minScore5e" className="text-sm font-medium">Minimum Purchasable:</label>
+                            <input
+                                id="minScore5e"
+                                type="number"
+                                value={minPurchasableScore}
+                                onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
+                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
+                                min="1"
+                                max="30" // A broader range for user input flexibility
+                            />
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <label htmlFor="maxScore5e" className="text-sm font-medium">Maximum Purchasable:</label>
+                            <input
+                                id="maxScore5e"
+                                type="number"
+                                value={maxPurchasableScore}
+                                onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)}
+                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
+                                min="1"
+                                max="30" // A broader range for user input flexibility
+                            />
+                        </div>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
+                        Set the minimum/maximum base score a player can allocate using points.
+                    </p>
+                </div>
             </div>
 
             {/* Ability Score Adjustments */}
@@ -815,10 +979,14 @@ const Dnd5eCalculator = ({ discordLink }) => {
                                             (Racial: {RACE_MODIFIERS_5E[selectedRace][ability] >= 0 ? '+' : ''}{RACE_MODIFIERS_5E[selectedRace][ability]})
                                         </span>
                                     )}
-                                    {/* Display chosen 'any' increases specifically */}
-                                    {(selectedAnyIncreases.any1 === ability || selectedAnyIncreases.any2 === ability) && (
+                                    {(selectedAnyIncreases.any1 === ability && (selectedRace === 'Human (Variant)' || selectedRace === 'Half-Elf')) && (
                                         <span className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                                            ({selectedAnyIncreases.any1 === ability && 'Chosen +1'}{selectedAnyIncreases.any1 === ability && selectedAnyIncreases.any2 === ability && ', '}{selectedAnyIncreases.any2 === ability && 'Chosen +1'})
+                                            ({RACE_MODIFIERS_5E[selectedRace].any1 > 0 ? '+' : ''}1 Chosen {selectedRace === 'Human (Variant)' ? '1' : ''})
+                                        </span>
+                                    )}
+                                    {(selectedAnyIncreases.any2 === ability && (selectedRace === 'Human (Variant)' || selectedRace === 'Half-Elf') && selectedAnyIncreases.any2 !== selectedAnyIncreases.any1) && (
+                                        <span className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                                            ({RACE_MODIFIERS_5E[selectedRace].any2 > 0 ? '+' : ''}1 Chosen {selectedRace === 'Human (Variant)' ? '2' : ''})
                                         </span>
                                     )}
                                 </>
@@ -874,6 +1042,23 @@ const Dnd5eCalculator = ({ discordLink }) => {
                 </div>
                 <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a>.</p>
                 <p className="mt-2">Join our community on Discord: <a href={discordLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Mystery Fantasy Dungeon 9000</a></p>
+                {paypalLink && cashappLink && (
+                    <div className="mt-4 p-3 bg-green-50 dark:bg-green-900 rounded-lg text-center">
+                        <p className="text-sm font-medium text-green-700 dark:text-green-200 mb-2">Enjoying the calculator? Consider supporting its development!</p>
+                        <div className="flex justify-center space-x-4">
+                            {paypalLink && (
+                                <a href={paypalLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline font-bold">
+                                    Support via PayPal
+                                </a>
+                            )}
+                            {cashappLink && (
+                                <a href={cashappLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline font-bold">
+                                    Support via Cash App
+                                </a>
+                            )}
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
@@ -887,6 +1072,8 @@ const App = () => {
 
     // Define your Discord invite link here (passed to both calculators)
     const discordInviteLink = "http://discord.gg/kCjuPr6"; // IMPORTANT: Ensure this is your actual invite link!
+    const paypalLink = "https://paypal.me/MFD9k"; // Your PayPal.Me link
+    const cashappLink = "https://cash.app/$MFD9k"; // Your Cash App link (or Cashtag in a URL format if available)
 
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 font-inter">
@@ -913,8 +1100,8 @@ const App = () => {
                 </div>
 
                 {/* Conditional Game Calculator Rendering */}
-                {activeGame === '3.5e' && <Dnd35eCalculator discordLink={discordInviteLink} />}
-                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordInviteLink} />}
+                {activeGame === '3.5e' && <Dnd35eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} />}
+                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} />}
             </div>
         </div>
     );
