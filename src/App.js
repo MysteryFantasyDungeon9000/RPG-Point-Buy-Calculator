@@ -103,7 +103,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             cost = 0; 
         }
         return cost;
-    }, [useCustomCosts, customAbilityCosts, allowNegativeCosts]);
+    }, [useCustomCosts, customAbilityCosts, allowNegativeCosts]); 
 
     const handleCustomRacialModChange = (ability, value) => {
         setCustomRacialModifiers(prev => ({ ...prev, [ability]: parseInt(value) || 0 }));
@@ -196,12 +196,12 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         setCustomAbilityCosts(prev => ({ ...prev, [score]: parseInt(value) || 0 }));
     };
 
-    const handleMinMaxChange = (setter, value) => {
+    const handleMinMaxChange = (setterFunc, value) => { // Corrected parameter name
         const parsedValue = parseInt(value);
         if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) {
-            setter(parsedValue);
+            setterFunc(parsedValue); // Use the passed setter function
         } else if (value === '') {
-            setter('');
+            setterFunc('');
         }
     };
 
@@ -243,7 +243,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             }
 
             if (currentTotalPoints > pointPool || needsReset) {
-                const resetValue = minPurchasableScore || DEFAULT_MIN_PURCHASABLE_3_5E;
+                const resetValue = minPurchasableScore || DEFAULT_MIN_PURCHASABLE_3_5E; 
                 const safeResetValue = getCostForScore(resetValue) !== Infinity ? resetValue : DEFAULT_MIN_PURCHASABLE_3_5E;
                 return {
                     str: safeResetValue, dex: safeResetValue, con: safeResetValue,
@@ -399,7 +399,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                     Define Custom Costs (Points required to reach score)
                                 </h3>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                    {ALL_POSSIBLE_SCORES.map(score => (
+                                    {ALL_POSSIBLE_SCORES.map(score => ( 
                                         <div key={score} className="flex items-center justify-between">
                                             <label htmlFor={`cost-${score}`} className="text-sm font-medium">Score {score}:</label>
                                             <input
@@ -783,12 +783,12 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         setCustomAbilityCosts(prev => ({ ...prev, [score]: parseInt(value) || 0 }));
     };
 
-    const handleMinMaxChange = (setter, value) => {
+    const handleMinMaxChange = (setterFunc, value) => { // Corrected parameter name
         const parsedValue = parseInt(value);
-        if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) {
-            setter(parsedValue);
+        if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) { 
+            setterFunc(parsedValue);
         } else if (value === '') {
-            setter('');
+            setterFunc('');
         }
     };
 
@@ -1039,7 +1039,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                     Define Custom Costs (Points required to reach score)
                                 </h3>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                                    {ALL_POSSIBLE_SCORES.map(score => (
+                                    {ALL_POSSIBLE_SCORES.map(score => ( 
                                         <div key={score} className="flex items-center justify-between">
                                             <label htmlFor={`cost-5e-${score}`} className="text-sm font-medium">Score {score}:</label>
                                             <input
@@ -1072,7 +1072,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                         id="minScore5e"
                                         type="number"
                                         value={minPurchasableScore}
-                                        onChange={(e) => handleMinMaxChange(setter, e.target.value)}
+                                        onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
                                         min="1" 
                                         max="30" 
@@ -1084,7 +1084,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                         id="maxScore5e"
                                         type="number"
                                         value={maxPurchasableScore}
-                                        onChange={(e) => handleMinMaxChange(setter, e.target.value)}
+                                        onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)} // Corrected line
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
                                         min="1" 
                                         max="30" 
