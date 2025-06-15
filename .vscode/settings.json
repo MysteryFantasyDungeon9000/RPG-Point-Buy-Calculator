@@ -1,0 +1,12 @@
+{
+  "css.validate": false,
+  "scss.validate": false,
+  "less.validate": false,
+  "editor.quickSuggestions": {
+    "strings": true
+  },
+  "tailwindCSS.experimental.configFile": null, // Use default auto-detection
+  "files.associations": {
+    "*.css": "postcss" // Tell VS Code to treat .css files as PostCSS
+  }
+}
