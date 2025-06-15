@@ -5,7 +5,7 @@ const getAbilityMod = (score) => Math.floor((score - 10) / 2);
 
 // --- D&D 3.5e Specific Constants ---
 const STANDARD_ABILITY_COSTS_3_5E = {
-    3: -11, 4: -7, 5: -4, 6: -2, 7: -1, // Negative costs for scores below 8
+    3: -9, 4: -6, 5: -4, 6: -2, 7: -1, // Negative costs for scores below 8
     8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 6, 15: 8, 16: 10, 17: 13, 18: 16,
 };
 const RACE_MODIFIERS_3_5E = {
@@ -76,14 +76,20 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         if (activeCosts.hasOwnProperty(score)) {
             return activeCosts[score];
         }
-        // If a score is requested that's outside our defined costs,
-        // it means it's an invalid score for point buy, so return Infinity
-        // to prevent it from being selected due to cost limits.
         return Infinity; 
     }, [useCustomCosts, customAbilityCosts]);
 
     const handleCustomRacialModChange = (ability, value) => {
         setCustomRacialModifiers(prev => ({ ...prev, [ability]: parseInt(value) || 0 }));
+    };
+
+    const handleCustomPointPoolInput = (value) => { // ADDED THIS FUNCTION
+        const parsedValue = parseInt(value);
+        if (!isNaN(parsedValue)) {
+            setCustomPointPoolInput(parsedValue);
+        } else if (value === '') {
+            setCustomPointPoolInput('');
+        }
     };
 
     useEffect(() => {
@@ -102,11 +108,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
         for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
             const currentTargetScore = targetScores[ability];
-            // Ensure we calculate cost only for valid scores in the active range (minPurchasable to maxPurchasable)
-            // If the currentTargetScore falls outside the valid range, its cost should not be included
-            // or ideally, the score itself would have been clamped by the useEffect below.
             const cost = getCostForScore(currentTargetScore);
-            if (cost !== Infinity) { // Only add cost if it's a valid, defined score
+            if (cost !== Infinity) { 
                 totalPointsSpent += cost;
             }
 
@@ -134,30 +137,25 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             const currentScore = newTargetScores[ability];
             const newScore = currentScore + delta;
 
-            // CRITICAL FIX: Apply min/max purchasable limits here based on state
-            // The check MUST use the dynamic minPurchasableScore and maxPurchasableScore
             if (newScore < minPurchasableScore || newScore > maxPurchasableScore) {
-                return prevTargetScores; // Do not allow adjustment outside the set range
+                return prevTargetScores; 
             }
 
-            // Ensure the new score has a defined cost before allowing the change
             const costOfNewScore = getCostForScore(newScore);
             if (costOfNewScore === Infinity) {
-                return prevTargetScores; // If the target score has no defined cost, it's invalid
+                return prevTargetScores;
             }
 
-            // Calculate hypothetical total points spent with the new score
             let hypotheticalPointsSpent = 0;
             for (const ab of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
                 const scoreToCost = (ab === ability) ? newScore : newTargetScores[ab];
                 const cost = getCostForScore(scoreToCost);
-                if (cost === Infinity) { // If any score in the hypothetical set is invalid, break
+                if (cost === Infinity) { 
                     return prevTargetScores;
                 }
                 hypotheticalPointsSpent += cost;
             }
 
-            // Check if the hypothetical total points exceed the pool
             if (hypotheticalPointsSpent > pointPool) {
                 return prevTargetScores;
             }
@@ -173,13 +171,11 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
     const handleMinMaxChange = (setter, value) => {
         const parsedValue = parseInt(value);
-        // Allow empty string to clear input, but enforce reasonable bounds for numbers
         if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) {
             setter(parsedValue);
         } else if (value === '') {
             setter('');
         }
-        // If parsed value is invalid (e.g., "abc"), do nothing, preserve current state
     };
 
     // Effect to clamp scores when minPurchasableScore or maxPurchasableScore changes
@@ -196,18 +192,14 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                     newScore = maxPurchasableScore;
                 }
 
-                // Ensure the clamped score also has a defined cost
                 if (getCostForScore(newScore) === Infinity) {
-                     // If clamping to a score that has no defined cost, default to 8
-                     // This prevents the calculator from getting stuck if min/max makes scores unpurchasable
-                     newScore = DEFAULT_MIN_PURCHASABLE_3_5E; // Fallback
+                     newScore = DEFAULT_MIN_PURCHASABLE_3_5E; 
                      if (getCostForScore(newScore) === Infinity || newScore < minPurchasableScore || newScore > maxPurchasableScore) {
-                        // If even fallback is bad, just set to the new min limit if it has a cost
                         const closestValidScore = Object.keys(STANDARD_ABILITY_COSTS_3_5E)
                                                 .map(Number)
                                                 .filter(s => s >= minPurchasableScore && s <= maxPurchasableScore)
-                                                .sort((a,b) => a - b)[0]; // Find the lowest purchasable score that has a cost
-                        newScore = closestValidScore !== undefined ? closestValidScore : DEFAULT_MIN_PURCHASABLE_3_5E; // Fallback if no valid score in range
+                                                .sort((a,b) => a - b)[0]; 
+                        newScore = closestValidScore !== undefined ? closestValidScore : DEFAULT_MIN_PURCHASABLE_3_5E; 
                      }
                 }
 
@@ -217,14 +209,11 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                     changed = true;
                 }
             }
-            // If the minimum or maximum purchasable score changes and the current scores are outside this range, reset them to the new minimum.
-            // Also, reset if the total points spent would exceed the point pool due to new costs (e.g., if a custom cost became very high).
-            // This is a robust way to prevent the calculator from getting "stuck" in an invalid state.
             let currentTotalPoints = 0;
             let needsReset = false;
             for (const ab of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
                 const cost = getCostForScore(updatedScores[ab]);
-                if (cost === Infinity) { // If any of the scores now has an invalid cost, reset
+                if (cost === Infinity) {
                     needsReset = true;
                     break;
                 }
@@ -232,9 +221,11 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             }
 
             if (currentTotalPoints > pointPool || needsReset) {
+                // If a score becomes unpurchasable or total points exceed, reset all to minPurchasableScore
+                const resetValue = minPurchasableScore || DEFAULT_MIN_PURCHASABLE_3_5E; // Use default if min isn't set yet
                 return {
-                    str: minPurchasableScore, dex: minPurchasableScore, con: minPurchasableScore,
-                    int: minPurchasableScore, wis: minPurchasableScore, cha: minPurchasableScore,
+                    str: resetValue, dex: resetValue, con: resetValue,
+                    int: resetValue, wis: resetValue, cha: resetValue,
                 };
             }
 
@@ -267,8 +258,6 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                 setIsCustomPointPool(false);
                                 setPointPool(parseInt(e.target.value));
                             }
-                            // Reset scores if new pool makes current allocation invalid
-                            // This will be handled by the useEffect above that watches pointPool too.
                         }}
                         className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-indigo-500 focus:border-indigo-500"
                     >
@@ -702,7 +691,6 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             const currentScore = newTargetScores[ability];
             const newScore = currentScore + delta;
 
-            // CRITICAL FIX: Apply min/max purchasable limits here based on state
             if (newScore < minPurchasableScore || newScore > maxPurchasableScore) {
                 return prevTargetScores;
             }
@@ -764,8 +752,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                 }
 
                  if (getCostForScore(newScore) === Infinity) {
-                     // If clamping to a score that has no defined cost, default to 8
-                     newScore = DEFAULT_MIN_PURCHASABLE_5E; // Fallback
+                     newScore = DEFAULT_MIN_PURCHASABLE_5E; 
                      if (getCostForScore(newScore) === Infinity || newScore < minPurchasableScore || newScore > maxPurchasableScore) {
                         const closestValidScore = Object.keys(STANDARD_ABILITY_COSTS_5E)
                                                 .map(Number)
@@ -793,9 +780,11 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             }
 
             if (currentTotalPoints > pointPool || needsReset) {
+                // If a score becomes unpurchasable or total points exceed, reset all to minPurchasableScore
+                const resetValue = minPurchasableScore || DEFAULT_MIN_PURCHASABLE_5E;
                 return {
-                    str: minPurchasableScore, dex: minPurchasableScore, con: minPurchasableScore,
-                    int: minPurchasableScore, wis: minPurchasableScore, cha: minPurchasableScore,
+                    str: resetValue, dex: resetValue, con: resetValue,
+                    int: resetValue, wis: resetValue, cha: resetValue,
                 };
             }
 
@@ -827,8 +816,6 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                 setIsCustomPointPool(false);
                                 setPointPool(parseInt(e.target.value));
                             }
-                            // Reset scores if new pool makes current allocation invalid
-                            // This will be handled by the useEffect above that watches pointPool too.
                         }}
                         className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500"
                     >
