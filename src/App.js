@@ -196,10 +196,10 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         setCustomAbilityCosts(prev => ({ ...prev, [score]: parseInt(value) || 0 }));
     };
 
-    const handleMinMaxChange = (setterFunc, value) => { // Corrected parameter name
+    const handleMinMaxChange = (setterFunc, value) => { 
         const parsedValue = parseInt(value);
         if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) {
-            setterFunc(parsedValue); // Use the passed setter function
+            setterFunc(parsedValue); 
         } else if (value === '') {
             setterFunc('');
         }
@@ -660,6 +660,17 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         setSelectedAnyIncreases(prev => ({ ...prev, [key]: value }));
     };
 
+    // NEW STATE FOR OPTIONAL STARTING FEAT/ASI
+    const [startingAsiOption, setStartingAsiOption] = useState('none'); // 'none', 'standard', 'halfFeat'
+    const [featAsiChoices, setFeatAsiChoices] = useState({
+        ability1: '', // for +2 or first +1
+        ability2: '', // for second +1 (if standard ASI is two +1s)
+    });
+
+    const handleFeatAsiChange = (key, value) => {
+        setFeatAsiChoices(prev => ({ ...prev, [key]: value }));
+    };
+
 
     const getCostForScore = useCallback((score) => {
         const activeCosts = useCustomCosts ? customAbilityCosts : STANDARD_ABILITY_COSTS_5E;
@@ -718,17 +729,48 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         }
 
 
+        // Copy target scores for initial calculation before applying feat/ASI bonuses
+        const scoresAfterPointBuyAndRace = { ...targetScores };
+
         for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
-            const currentTargetScore = targetScores[ability];
+            const currentTargetScore = scoresAfterPointBuyAndRace[ability]; // Use base score for cost calc
             const cost = getCostForScore(currentTargetScore);
             if (cost !== Infinity) {
                 totalPointsSpent += cost;
             }
+        }
 
-            const raceMod = activeRacialModifiers[ability] || 0;
-            const finalScore = currentTargetScore + raceMod;
-            finalAbilityScores[ability] = finalScore;
-            finalAbilityMods[ability] = getAbilityMod(finalScore);
+        // Apply Racial Modifiers FIRST
+        for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+            scoresAfterPointBuyAndRace[ability] += (activeRacialModifiers[ability] || 0);
+        }
+
+        // Apply Optional Starting Feat/ASI bonuses AFTER racial modifiers
+        const scoresAfterAllBonuses = { ...scoresAfterPointBuyAndRace }; // Clone to apply ASI/Feat
+
+        if (startingAsiOption === 'standard') {
+            if (featAsiChoices.ability1) {
+                if (featAsiChoices.ability2 && featAsiChoices.ability1 !== featAsiChoices.ability2) {
+                    // Two +1s
+                    scoresAfterAllBonuses[featAsiChoices.ability1] = (scoresAfterAllBonuses[featAsiChoices.ability1] || 0) + 1;
+                    scoresAfterAllBonuses[featAsiChoices.ability2] = (scoresAfterAllBonuses[featAsiChoices.ability2] || 0) + 1;
+                } else if (featAsiChoices.ability1) {
+                    // One +2
+                    scoresAfterAllBonuses[featAsiChoices.ability1] = (scoresAfterAllBonuses[featAsiChoices.ability1] || 0) + 2;
+                }
+            }
+        } else if (startingAsiOption === 'halfFeat') {
+            if (featAsiChoices.ability1) {
+                // One +1 from half-feat
+                scoresAfterAllBonuses[featAsiChoices.ability1] = (scoresAfterAllBonuses[featAsiChoices.ability1] || 0) + 1;
+            }
+        }
+
+
+        // Finalize scores and modifiers
+        for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+            finalAbilityScores[ability] = scoresAfterAllBonuses[ability];
+            finalAbilityMods[ability] = getAbilityMod(finalAbilityScores[ability]);
         }
 
         setCalculatedStats({
@@ -737,7 +779,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             finalAbilityScores: finalAbilityScores,
             finalAbilityMods: finalAbilityMods,
         });
-    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore, selectedAnyIncreases]);
+    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore, selectedAnyIncreases, startingAsiOption, featAsiChoices]); // Added new states to dependencies
 
 
     useEffect(() => {
@@ -783,9 +825,9 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         setCustomAbilityCosts(prev => ({ ...prev, [score]: parseInt(value) || 0 }));
     };
 
-    const handleMinMaxChange = (setterFunc, value) => { // Corrected parameter name
+    const handleMinMaxChange = (setterFunc, value) => {
         const parsedValue = parseInt(value);
-        if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) { 
+        if (!isNaN(parsedValue) && parsedValue >= 1 && parsedValue <= 30) {
             setterFunc(parsedValue);
         } else if (value === '') {
             setterFunc('');
@@ -934,11 +976,11 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                 </div>
             )}
 
-            {/* 5e Specific Any Increases Selection */}
+            {/* 5e Specific Any Increases Selection (from Human Variant/Half-Elf) */}
             {currentRaceHasAnyIncreases && (
                 <div className="mb-8 p-4 bg-blue-50 dark:bg-blue-900 border-l-4 border-blue-500 rounded-lg shadow-inner">
                     <h2 className="text-xl md:text-2xl font-semibold text-center text-blue-800 dark:text-blue-200 mb-4">
-                        Choose Additional Ability Increases
+                        Choose Racial +1 Ability Increases
                     </h2>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {RACE_MODIFIERS_5E[selectedRace].any1 && (
@@ -993,6 +1035,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                 </h2>
                 {!isRulesCollapsed && (
                     <div className="transition-all duration-300 ease-in-out">
+                        {/* Point Cost Rules (Standard/Custom) */}
                         <div className="flex justify-center space-x-4 mb-4">
                             <label className="inline-flex items-center">
                                 <input
@@ -1060,7 +1103,103 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                             </div>
                         )}
 
-                        {/* Min/Max Purchasable Scores - Moved inside collapsible section */}
+                        {/* NEW: Optional Starting Feat / ASI */}
+                        <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
+                            <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
+                                Optional Starting Feat / ASI
+                            </h3>
+                            <div className="flex justify-center space-x-4 mb-4">
+                                <label className="inline-flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="startingAsiOption"
+                                        value="none"
+                                        checked={startingAsiOption === 'none'}
+                                        onChange={() => {
+                                            setStartingAsiOption('none');
+                                            setFeatAsiChoices({ ability1: '', ability2: '' }); // Clear choices
+                                        }}
+                                        className="form-radio h-4 w-4 text-red-600 transition duration-150 ease-in-out"
+                                    />
+                                    <span className="ml-2 text-gray-700 dark:text-gray-300">None</span>
+                                </label>
+                                <label className="inline-flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="startingAsiOption"
+                                        value="standard"
+                                        checked={startingAsiOption === 'standard'}
+                                        onChange={() => setStartingAsiOption('standard')}
+                                        className="form-radio h-4 w-4 text-red-600 transition duration-150 ease-in-out"
+                                    />
+                                    <span className="ml-2 text-gray-700 dark:text-gray-300">Standard ASI (+2 to one or +1 to two)</span>
+                                </label>
+                                <label className="inline-flex items-center">
+                                    <input
+                                        type="radio"
+                                        name="startingAsiOption"
+                                        value="halfFeat"
+                                        checked={startingAsiOption === 'halfFeat'}
+                                        onChange={() => {
+                                            setStartingAsiOption('halfFeat');
+                                            setFeatAsiChoices(prev => ({ ...prev, ability2: '' })); // Clear second choice for half-feat
+                                        }}
+                                        className="form-radio h-4 w-4 text-red-600 transition duration-150 ease-in-out"
+                                    />
+                                    <span className="ml-2 text-gray-700 dark:text-gray-300">Half-Feat (+1 to one)</span>
+                                </label>
+                            </div>
+
+                            {startingAsiOption !== 'none' && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                                    <div>
+                                        <label htmlFor="feat-asi-ability1" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                            {startingAsiOption === 'standard' ? 'First Ability (+1 or +2):' : 'Ability for +1:'}
+                                        </label>
+                                        <select
+                                            id="feat-asi-ability1"
+                                            value={featAsiChoices.ability1}
+                                            onChange={(e) => handleFeatAsiChange('ability1', e.target.value)}
+                                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500"
+                                        >
+                                            <option value="">-- Select Ability --</option>
+                                            {abilities.map(ab => (
+                                                <option key={ab} value={ab} disabled={startingAsiOption === 'standard' && featAsiChoices.ability2 === ab}>
+                                                    {ab.toUpperCase()}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+
+                                    {startingAsiOption === 'standard' && (
+                                        <div>
+                                            <label htmlFor="feat-asi-ability2" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                                Second Ability (+1, optional):
+                                            </label>
+                                            <select
+                                                id="feat-asi-ability2"
+                                                value={featAsiChoices.ability2}
+                                                onChange={(e) => handleFeatAsiChange('ability2', e.target.value)}
+                                                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500"
+                                            >
+                                                <option value="">-- Select Ability (optional) --</option>
+                                                {abilities.map(ab => (
+                                                    <option key={ab} value={ab} disabled={featAsiChoices.ability1 === ab}>
+                                                        {ab.toUpperCase()}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                                Leave blank for a single +2 to the first ability.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+
+                        {/* Min/Max Purchasable Scores */}
                         <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
                             <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
                                 Purchasable Score Limits (before racial/template bonuses)
@@ -1084,7 +1223,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                         id="maxScore5e"
                                         type="number"
                                         value={maxPurchasableScore}
-                                        onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)} // Corrected line
+                                        onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)} 
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
                                         min="1" 
                                         max="30" 
@@ -1191,6 +1330,22 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                     (Custom Racial: {customRacialModifiers[ability] >= 0 ? '+' : ''}{customRacialModifiers[ability]})
                                 </span>
                             ) : null}
+                            {/* NEW: Display Feat/ASI bonuses */}
+                            {(startingAsiOption === 'standard' && featAsiChoices.ability1 === ability) && (
+                                <span className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                    ({featAsiChoices.ability2 ? '+1' : '+2'} from ASI)
+                                </span>
+                            )}
+                            {(startingAsiOption === 'standard' && featAsiChoices.ability2 === ability && featAsiChoices.ability1 !== featAsiChoices.ability2) && (
+                                <span className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                    (+1 from ASI)
+                                </span>
+                            )}
+                            {(startingAsiOption === 'halfFeat' && featAsiChoices.ability1 === ability) && (
+                                <span className="text-xs text-green-600 dark:text-green-400 mt-1">
+                                    (+1 from Half-Feat)
+                                </span>
+                            )}
                         </div>
                     ))}
                 </div>
