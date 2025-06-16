@@ -1,15 +1,15 @@
 {
   "files": {
-    "main.css": "/RPG-Point-Buy-Calculator/static/css/main.16e8141c.css",
-    "main.js": "/RPG-Point-Buy-Calculator/static/js/main.75bcd597.js",
+    "main.css": "/RPG-Point-Buy-Calculator/static/css/main.1dfa1198.css",
+    "main.js": "/RPG-Point-Buy-Calculator/static/js/main.5a630692.js",
     "static/js/453.c8d8eb58.chunk.js": "/RPG-Point-Buy-Calculator/static/js/453.c8d8eb58.chunk.js",
     "index.html": "/RPG-Point-Buy-Calculator/index.html",
-    "main.16e8141c.css.map": "/RPG-Point-Buy-Calculator/static/css/main.16e8141c.css.map",
-    "main.75bcd597.js.map": "/RPG-Point-Buy-Calculator/static/js/main.75bcd597.js.map",
+    "main.1dfa1198.css.map": "/RPG-Point-Buy-Calculator/static/css/main.1dfa1198.css.map",
+    "main.5a630692.js.map": "/RPG-Point-Buy-Calculator/static/js/main.5a630692.js.map",
     "453.c8d8eb58.chunk.js.map": "/RPG-Point-Buy-Calculator/static/js/453.c8d8eb58.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.16e8141c.css",
-    "static/js/main.75bcd597.js"
+    "static/css/main.1dfa1198.css",
+    "static/js/main.5a630692.js"
   ]
 }
