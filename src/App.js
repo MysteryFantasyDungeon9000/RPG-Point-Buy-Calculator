@@ -1614,8 +1614,6 @@ const App = () => {
         }
     }, [darkMode]);
 
-    // Removed discordServerId and discordWidgetSrc as they are no longer needed.
-
     return (
         // Ensure the main container explicitly sets its colors for dark mode
         <div className="min-h-screen p-4 font-inter bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
@@ -1645,17 +1643,6 @@ const App = () => {
                 <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 dark:text-purple-400 mb-8 text-center">
                     RPG Point Buy Calculator
                 </h1>
-
-                {/* Dark Mode Debugger - This div should ALWAYS change color with dark mode */}
-                <div className="p-4 mb-8 text-center rounded-lg shadow-md font-bold
-                            bg-green-200 text-green-800
-                            dark:bg-green-800 dark:text-green-200
-                            transition-colors duration-300 ease-in-out">
-                    <p>
-                        Dark Mode Test Section: This background should be <span className="font-extrabold">{darkMode ? 'DARK GREEN' : 'LIGHT GREEN'}</span> and text <span className="font-extrabold">{darkMode ? 'LIGHT GREEN' : 'DARK GREEN'}</span>.
-                    </p>
-                    <p className="text-sm mt-1">If this changes, dark mode is working at the root HTML level!</p>
-                </div>
 
                 {/* Game Selection Dropdown */}
                 <div className="flex justify-center mb-6">
