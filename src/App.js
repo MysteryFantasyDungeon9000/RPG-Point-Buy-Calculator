@@ -376,7 +376,6 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                             </label>
                         </div>
                         
-                        {/* Removed: Toggle for Negative Costs */}
                         {useCustomCosts && (
                             <div className="mt-4">
                                 <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
@@ -415,7 +414,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                     <input
                                         id="minScore35e"
                                         type="number"
-                                        value={minPurchasScore}
+                                        value={minPurchasableScore}
                                         onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
                                         min="1" 
@@ -1048,8 +1047,6 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                 <span className="ml-2 text-gray-700 dark:text-gray-300">Custom Costs</span>
                             </label>
                         </div>
-
-                        {/* Removed: Toggle for Negative Costs */}
 
                         {useCustomCosts && (
                             <div className="mt-4">
