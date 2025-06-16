@@ -745,8 +745,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                     </div>
                 )}
                 <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a></p>
-                <p className="mt-2">Join our community on Discord: <a href={discordLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Mystery Fantasy Dungeon 9000</a></p>
-                {/* Feedback Email Link */}
+                {/* Removed the inline Discord text link */}
                 <p className="mt-2">
                     Have feedback or suggestions? Email us at: {' '}
                     <a href={`mailto:${feedbackEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline font-bold">
@@ -1397,7 +1396,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {abilities.map((ability) => (
-                        // Add dark mode to the ability score card backgrounds
+                        // Add dark mode to the final ability score card backgrounds
                         <div key={ability} className="flex items-center justify-between bg-white dark:bg-gray-900 p-3 rounded-lg shadow-sm">
                             <span className="font-medium text-lg capitalize w-20">
                                 {ability.toUpperCase()}:
@@ -1553,8 +1552,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                     </div>
                 )}
                 <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a></p>
-                <p className="mt-2">Join our community on Discord: <a href={discordLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Mystery Fantasy Dungeon 9000</a></p>
-                {/* Feedback Email Link */}
+                {/* Removed the inline Discord text link */}
                 <p className="mt-2">
                     Have feedback or suggestions? Email us at: {' '}
                     <a href={`mailto:${feedbackEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline font-bold">
@@ -1665,21 +1663,24 @@ const App = () => {
                 {activeGame === '3.5e' && <Dnd35eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
                 {activeGame === '5e' && <Dnd5eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
 
-                {/* Discord Button Link Section (Replaced Widget) */}
-                <div className="flex justify-center mt-8 mb-4">
+                {/* Discord Button Link Section (Refined) */}
+                <div className="flex justify-center mt-8 mb-4 flex-col items-center">
+                    <p className="text-lg font-bold text-center text-gray-700 dark:text-gray-300 mb-4">
+                        Join our community on Discord
+                    </p>
                     <a
                         href={discordInviteLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
                                    dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-500 transition-colors duration-300 ease-in-out"
-                        aria-label="Join our Discord Server"
+                        aria-label="Join Mystery Fantasy Dungeon 9000 Discord Server"
                     >
                         {/* Discord Icon (simple SVG) */}
                         <svg className="-ml-1 mr-3 h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M20.916 2.001A18.822 18.822 0 0017.065 0C15.006 0 13.111.954 11.666 2.457L11.5 2.625l-.166-.168C10.055.954 8.16 0 6.101 0A18.82 18.82 0 002.25 2.001C.967 4.298.375 6.945 0 9.699c.356 3.125 1.705 5.922 4.095 7.828l-.348 2.052c-1.106 6.54 5.962 5.86 5.962 5.86l.666-3.921c1.233.155 2.48.155 3.713 0l.666 3.921c0 0 7.068.68 5.962-5.86l-.348-2.052c2.39-1.906 3.739-4.703 4.095-7.828-.375-2.754-.967-5.401-2.25-7.698zm-6.096 15.656a1.5 1.5 0 01-1.5-1.5 1.5 1.5 0 011.5-1.5 1.5 1.5 0 011.5 1.5 1.5 1.5 0 01-1.5 1.5zm3.626-3.89a1.5 1.5 0 01-1.5-1.5 1.5 1.5 0 011.5-1.5 1.5 1.5 0 011.5 1.5 1.5 1.5 0 01-1.5 1.5zM6.866 17.657a1.5 1.5 0 01-1.5-1.5 1.5 1.5 0 011.5-1.5 1.5 1.5 0 011.5 1.5 1.5 1.5 0 01-1.5 1.5z" />
                         </svg>
-                        Join Our Discord Server
+                        Mystery Fantasy Dungeon 9000
                     </a>
                 </div>
 
