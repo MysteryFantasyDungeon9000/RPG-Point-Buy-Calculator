@@ -1635,7 +1635,7 @@ const App = () => {
 
                 {/* Conditional Game Calculator Rendering */}
                 {activeGame === '3.5e' && <Dnd35eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
-                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
+                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
             </div>
         </div>
     );
