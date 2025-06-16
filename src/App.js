@@ -1615,32 +1615,20 @@ const App = () => {
                 </div>
 
                 {/* Main Heading for the entire application */}
-                <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 dark:text-purple-400 mb-4 text-center">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 dark:text-purple-400 mb-8 text-center">
                     RPG Point Buy Calculator
                 </h1>
 
-                {/* Discord Server Widget Section */}
-                <div className="flex justify-center mb-4"> {/* Adjusted margin-bottom */}
-                    <iframe
-                        src={discordWidgetSrc}
-                        width="350" // Base width
-                        height="500" // Base height
-                        allowTransparency="true"
-                        frameBorder="0"
-                        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
-                        title="Discord Server Widget"
-                        // Responsive Tailwind classes:
-                        // w-full: takes full width of parent
-                        // max-w-sm/md/lg: limits max width for better readability on larger screens
-                        // mx-auto: centers the iframe
-                        // h-[300px]/md:h-[400px]/lg:h-[500px]: sets responsive height for readability
-                        className="w-full max-w-sm md:max-w-md lg:max-w-lg h-[300px] md:h-[400px] lg:h-[500px] rounded-lg shadow-xl"
-                        style={{ minWidth: '250px' }} // Smallest acceptable width for the widget
-                    ></iframe>
+                {/* Dark Mode Debugger - This div should ALWAYS change color with dark mode */}
+                <div className="p-4 mb-8 text-center rounded-lg shadow-md font-bold
+                            bg-green-200 text-green-800
+                            dark:bg-green-800 dark:text-green-200
+                            transition-colors duration-300 ease-in-out">
+                    <p>
+                        Dark Mode Test Section: This background should be <span className="font-extrabold">{darkMode ? 'DARK GREEN' : 'LIGHT GREEN'}</span> and text <span className="font-extrabold">{darkMode ? 'LIGHT GREEN' : 'DARK GREEN'}</span>.
+                    </p>
+                    <p className="text-sm mt-1">If this changes, dark mode is working at the root HTML level!</p>
                 </div>
-                <p className="text-lg font-bold text-center text-gray-700 dark:text-gray-300 mb-8">
-                    Presented by <a href={discordInviteLink} target="_blank" rel="noopener noreferrer" className="text-purple-700 dark:text-purple-400 hover:underline">MFD9K Discord</a>
-                </p>
 
                 {/* Game Selection Dropdown */}
                 <div className="flex justify-center mb-6">
@@ -1660,7 +1648,26 @@ const App = () => {
 
                 {/* Conditional Game Calculator Rendering */}
                 {activeGame === '3.5e' && <Dnd35eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
-                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
+                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
+
+                {/* Discord Server Widget Section - MOVED TO BOTTOM */}
+                <div className="flex justify-center mt-8 mb-4 flex-col items-center"> {/* Added flex-col & items-center for vertical centering of text */}
+                    <p className="text-lg font-bold text-center text-gray-700 dark:text-gray-300 mb-4">
+                        Presented by <a href={discordInviteLink} target="_blank" rel="noopener noreferrer" className="text-purple-700 dark:text-purple-400 hover:underline">MFD9K Discord</a>
+                    </p>
+                    <iframe
+                        src={discordWidgetSrc}
+                        width="350" // Base width
+                        height="500" // Base height
+                        allowTransparency="true"
+                        frameBorder="0"
+                        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                        title="Discord Server Widget"
+                        className="w-full max-w-sm md:max-w-md lg:max-w-lg h-[300px] md:h-[400px] lg:h-[500px] rounded-lg shadow-xl"
+                        style={{ minWidth: '250px' }} // Smallest acceptable width for the widget
+                    ></iframe>
+                </div>
+
             </div>
         </div>
     );
