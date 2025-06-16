@@ -8,8 +8,8 @@ const ALL_POSSIBLE_SCORES = Array.from({ length: 19 }, (_, i) => i + 2); // Gene
 
 // --- D&D 3.5e Specific Constants ---
 const STANDARD_ABILITY_COSTS_3_5E = {
-    // Costs for scores below 8 (cumulative from 8) - common house rules
-    2: -13, 3: -9, 4: -6, 5: -4, 6: -2, 7: -1,
+    // Costs for scores below 8 (cumulative from 8) - now always 0
+    2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0,
     // Standard costs from 8 to 18
     8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 6, 15: 8, 16: 10, 17: 13, 18: 16,
     // Extended costs beyond 18 (common homebrew/escalating costs for higher values)
@@ -26,8 +26,8 @@ const DEFAULT_MAX_PURCHASABLE_3_5E = 18;
 
 // --- D&D 5e Specific Constants ---
 const STANDARD_ABILITY_COSTS_5E = {
-    // Costs for scores below 8 (cumulative from 8) - common house rules
-    2: -13, 3: -9, 4: -6, 5: -4, 6: -2, 7: -1,
+    // Costs for scores below 8 (cumulative from 8) - now always 0
+    2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0,
     // Standard costs from 8 to 15
     8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9,
     // Extended costs beyond 15 (common homebrew/escalating costs for higher values)
@@ -53,7 +53,7 @@ const DEFAULT_MAX_PURCHASABLE_5E = 15;
 
 
 // --- Dnd35eCalculator Component ---
-const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
+const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }) => {
     const [pointPool, setPointPool] = useState(INITIAL_POINT_POOL_3_5E);
     const [customPointPoolInput, setCustomPointPoolInput] = useState(INITIAL_POINT_POOL_3_5E);
     const [isCustomPointPool, setIsCustomPointPool] = useState(false);
@@ -68,11 +68,12 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
     const [customAbilityCosts, setCustomAbilityCosts] = useState(() => {
         const initialCosts = {};
         for (const score of ALL_POSSIBLE_SCORES) {
+            // Initialize custom costs based on the new standard (0 for < 8)
             initialCosts[score] = STANDARD_ABILITY_COSTS_3_5E.hasOwnProperty(score) ? STANDARD_ABILITY_COSTS_3_5E[score] : 0;
         }
         return initialCosts;
     });
-    const [allowNegativeCosts, setAllowNegativeCosts] = useState(true); 
+    // Removed: const [allowNegativeCosts, setAllowNegativeCosts] = useState(true); 
 
     // States for min/max purchasable scores
     const [minPurchasableScore, setMinPurchasableScore] = useState(DEFAULT_MIN_PURCHASABLE_3_5E);
@@ -97,13 +98,10 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
             return Infinity; 
         }
 
-        let cost = activeCosts[score];
-        
-        if (!allowNegativeCosts && score < 8 && cost < 0) {
-            cost = 0; 
-        }
-        return cost;
-    }, [useCustomCosts, customAbilityCosts, allowNegativeCosts]); 
+        // Now, costs below 8 are explicitly 0 in the STANDARD_ABILITY_COSTS_3_5E constant
+        // and custom costs are defined by the user. No need for a separate allowNegativeCosts check here.
+        return activeCosts[score];
+    }, [useCustomCosts, customAbilityCosts]); 
 
     const handleCustomRacialModChange = (ability, value) => {
         setCustomRacialModifiers(prev => ({ ...prev, [ability]: parseInt(value) || 0 }));
@@ -378,21 +376,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                             </label>
                         </div>
                         
-                        {/* Toggle for Negative Costs */}
-                        <div className="mt-4 flex justify-center">
-                            <label className="inline-flex items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={allowNegativeCosts}
-                                    onChange={(e) => setAllowNegativeCosts(e.target.checked)}
-                                    className="form-checkbox h-4 w-4 text-indigo-600 transition duration-150 ease-in-out"
-                                />
-                                <span className="ml-2 text-gray-700 dark:text-gray-300">
-                                    Allow Negative Point Costs (scores &lt; 8 refund points)
-                                </span>
-                            </label>
-                        </div>
-
+                        {/* Removed: Toggle for Negative Costs */}
                         {useCustomCosts && (
                             <div className="mt-4">
                                 <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
@@ -431,7 +415,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                     <input
                                         id="minScore35e"
                                         type="number"
-                                        value={minPurchasableScore}
+                                        value={minPurchasScore}
                                         onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
                                         className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
                                         min="1" 
@@ -550,10 +534,10 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                 {!isDescriptionCollapsed && (
                     <div className="transition-all duration-300 ease-in-out">
                         <p className="mb-2 text-gray-700 dark:text-gray-300">
-                            In D&D 3.5e, the point buy system allows players to customize their character's ability scores by spending a fixed pool of points. All six ability scores (Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma) start at a base of 8. Points are then spent to increase these scores.
+                            In D&D 3.5e, the point buy system allows players to customize their character's ability scores by spending a fixed pool of points. All six ability scores (Strength, Dexterity, Constitution, Intelligence, Wisdom, Charisma) start at a base of 8. Points are then spent to increase these scores. Scores below 8 provide no points back.
                         </p>
                         <p className="mb-2 text-gray-700 dark:text-gray-300">
-                            The cost to increase an ability score is cumulative from 8. Here is the standard cost table (including common house rules for scores below 8 and extended costs for higher values):
+                            The cost to increase an ability score is cumulative from 8. Here is the standard cost table:
                         </p>
                         <div className="overflow-x-auto mb-4 inline-block w-full">
                             <table className="mx-auto min-w-max divide-y divide-gray-200 dark:divide-gray-700 rounded-lg overflow-hidden">
@@ -568,8 +552,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                         <tr key={score}>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{score}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                                                {/* Display 0 if negative costs are disallowed and cost is negative */}
-                                                {!allowNegativeCosts && cost < 0 ? 0 : cost}
+                                                {/* No longer checking for allowNegativeCosts */}
+                                                {cost}
                                             </td>
                                         </tr>
                                     ))}
@@ -591,6 +575,13 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                 )}
                 <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a>.</p>
                 <p className="mt-2">Join our community on Discord: <a href={discordLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Mystery Fantasy Dungeon 9000</a></p>
+                {/* NEW: Feedback Email Link */}
+                <p className="mt-2">
+                    Have feedback or suggestions? Email us at: {' '}
+                    <a href={`mailto:${feedbackEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline font-bold">
+                        {feedbackEmail}
+                    </a>
+                </p>
                 {paypalLink && cashappLink && (
                     <div className="mt-4 p-3 bg-green-50 dark:bg-green-900 rounded-lg text-center">
                         <p className="text-sm font-medium text-green-700 dark:text-green-200 mb-2">Enjoying the calculator? Consider supporting its development!</p>
@@ -615,7 +606,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
 
 
 // --- Dnd5eCalculator Component ---
-const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
+const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }) => {
     // 5e specific states and logic
     const [pointPool, setPointPool] = useState(INITIAL_POINT_POOL_5E); // 5e standard is 27
     const [customPointPoolInput, setCustomPointPoolInput] = useState(INITIAL_POINT_POOL_5E);
@@ -631,11 +622,12 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
     const [customAbilityCosts, setCustomAbilityCosts] = useState(() => {
         const initialCosts = {};
         for (const score of ALL_POSSIBLE_SCORES) {
+            // Initialize custom costs based on the new standard (0 for < 8)
             initialCosts[score] = STANDARD_ABILITY_COSTS_5E.hasOwnProperty(score) ? STANDARD_ABILITY_COSTS_5E[score] : 0;
         }
         return initialCosts;
     });
-    const [allowNegativeCosts, setAllowNegativeCosts] = useState(true);
+    // Removed: const [allowNegativeCosts, setAllowNegativeCosts] = useState(true);
 
     // States for min/max purchasable scores
     const [minPurchasableScore, setMinPurchasableScore] = useState(DEFAULT_MIN_PURCHASABLE_5E);
@@ -677,14 +669,10 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
         if (score < 2 || score > 20 || !activeCosts.hasOwnProperty(score)) {
             return Infinity;
         }
-
-        let cost = activeCosts[score];
-
-        if (!allowNegativeCosts && score < 8 && cost < 0) {
-            cost = 0;
-        }
-        return cost;
-    }, [useCustomCosts, customAbilityCosts, allowNegativeCosts]);
+        // Now, costs below 8 are explicitly 0 in the STANDARD_ABILITY_COSTS_5E constant
+        // and custom costs are defined by the user. No need for a separate allowNegativeCosts check here.
+        return activeCosts[score];
+    }, [useCustomCosts, customAbilityCosts]);
 
 
     const handleCustomRacialModChange = (ability, value) => {
@@ -1061,20 +1049,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                             </label>
                         </div>
 
-                        {/* Toggle for Negative Costs */}
-                        <div className="mt-4 flex justify-center">
-                            <label className="inline-flex items-center">
-                                <input
-                                    type="checkbox"
-                                    checked={allowNegativeCosts}
-                                    onChange={(e) => setAllowNegativeCosts(e.target.checked)}
-                                    className="form-checkbox h-4 w-4 text-red-600 transition duration-150 ease-in-out"
-                                />
-                                <span className="ml-2 text-gray-700 dark:text-gray-300">
-                                    Allow Negative Point Costs (scores &lt; 8 refund points)
-                                </span>
-                            </label>
-                        </div>
+                        {/* Removed: Toggle for Negative Costs */}
 
                         {useCustomCosts && (
                             <div className="mt-4">
@@ -1103,7 +1078,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                             </div>
                         )}
 
-                        {/* NEW: Optional Starting Feat / ASI */}
+                        {/* Optional Starting Feat / ASI */}
                         <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
                             <h3 className="text-lg font-medium text-gray-700 dark:text-gray-300 mb-2 text-center">
                                 Optional Starting Feat / ASI
@@ -1330,7 +1305,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                     (Custom Racial: {customRacialModifiers[ability] >= 0 ? '+' : ''}{customRacialModifiers[ability]})
                                 </span>
                             ) : null}
-                            {/* NEW: Display Feat/ASI bonuses */}
+                            {/* Display Feat/ASI bonuses */}
                             {(startingAsiOption === 'standard' && featAsiChoices.ability1 === ability) && (
                                 <span className="text-xs text-green-600 dark:text-green-400 mt-1">
                                     ({featAsiChoices.ability2 ? '+1' : '+2'} from ASI)
@@ -1360,10 +1335,10 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                 {!isDescriptionCollapsed && (
                     <div className="transition-all duration-300 ease-in-out">
                         <p className="mb-2 text-gray-700 dark:text-gray-300">
-                            In D&D 5e, the standard point buy system typically uses a 27-point pool. Each ability score starts at 8, and points are spent to increase them up to a maximum of 15 before racial bonuses.
+                            In D&D 5e, the standard point buy system typically uses a 27-point pool. Each ability score starts at 8, and points are spent to increase them up to a maximum of 15 before racial bonuses. Scores below 8 provide no points back.
                         </p>
                         <p className="mb-2 text-gray-700 dark:text-gray-300">
-                            The cost to increase an ability score is cumulative from 8. Here is the standard cost table (including common house rules for scores below 8 and extended costs for higher values):
+                            The cost to increase an ability score is cumulative from 8. Here is the standard cost table:
                         </p>
                         <div className="overflow-x-auto mb-4 inline-block w-full">
                             <table className="mx-auto min-w-max divide-y divide-gray-200 dark:divide-gray-700 rounded-lg overflow-hidden">
@@ -1378,8 +1353,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                                         <tr key={score}>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{score}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                                                {/* Display 0 if negative costs are disallowed and cost is negative */}
-                                                {!allowNegativeCosts && cost < 0 ? 0 : cost}
+                                                {/* No longer checking for allowNegativeCosts */}
+                                                {cost}
                                             </td>
                                         </tr>
                                     ))}
@@ -1401,6 +1376,13 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink }) => {
                 )}
                 <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a>.</p>
                 <p className="mt-2">Join our community on Discord: <a href={discordLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Mystery Fantasy Dungeon 9000</a></p>
+                {/* Feedback Email Link */}
+                <p className="mt-2">
+                    Have feedback or suggestions? Email us at: {' '}
+                    <a href={`mailto:${feedbackEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline font-bold">
+                        {feedbackEmail}
+                    </a>
+                </p>
                 {paypalLink && cashappLink && (
                     <div className="mt-4 p-3 bg-green-50 dark:bg-green-900 rounded-lg text-center">
                         <p className="text-sm font-medium text-green-700 dark:text-green-200 mb-2">Enjoying the calculator? Consider supporting its development!</p>
@@ -1433,6 +1415,7 @@ const App = () => {
     const discordInviteLink = "http://discord.gg/kCjuPr6"; // IMPORTANT: Ensure this is your actual invite link!
     const paypalLink = "https://paypal.me/MFD9k"; // Your PayPal.Me link
     const cashappLink = "https://cash.app/$MFD9k"; // Your Cash App link (or Cashtag in a URL format if available)
+    const feedbackEmailAddress = "feedback@mfd9k.com"; // Placeholder email address
 
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 font-inter">
@@ -1459,8 +1442,8 @@ const App = () => {
                 </div>
 
                 {/* Conditional Game Calculator Rendering */}
-                {activeGame === '3.5e' && <Dnd35eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} />}
-                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} />}
+                {activeGame === '3.5e' && <Dnd35eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
+                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
             </div>
         </div>
     );
