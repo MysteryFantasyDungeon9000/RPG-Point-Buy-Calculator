@@ -15,11 +15,30 @@ const STANDARD_ABILITY_COSTS_3_5E = {
     // Extended costs beyond 18 (common homebrew/escalating costs for higher values)
     19: 20, 20: 24,
 };
+
+// UPDATED: Added LA to races
 const RACE_MODIFIERS_3_5E = {
-    'Human': {}, 'Elf': { dex: 2, con: -2 }, 'Dwarf': { con: 2, cha: -2 },
-    'Gnome': { con: 2, str: -2 }, 'Half-Elf': {}, 'Half-Orc': { str: 2, int: -2, cha: -2 },
-    'Halfling': { dex: 2, str: -2 }, 'Custom': {},
+    'Human': { la: 0 },
+    'Elf': { dex: 2, con: -2, la: 0 },
+    'Dwarf': { con: 2, cha: -2, la: 0 },
+    'Gnome': { con: 2, str: -2, la: 0 },
+    'Half-Elf': { la: 0 },
+    'Half-Orc': { str: 2, int: -2, cha: -2, la: 0 },
+    'Halfling': { dex: 2, str: -2, la: 0 },
+    'Custom': { la: 0 }, // Custom race starts with LA 0
 };
+
+// NEW: Templates and their modifiers + LA
+const TEMPLATE_MODIFIERS_3_5E = {
+    'None': { la: 0 },
+    'Advanced (+4 all)': { str: 4, dex: 4, con: 4, int: 4, wis: 4, cha: 4, la: 1 },
+    'Half-Celestial': { str: 4, dex: 2, con: 4, int: 2, wis: 4, cha: 4, la: 4 },
+    'Half-Dragon': { str: 8, con: 2, int: 2, cha: 2, la: 3 },
+    'Half-Fiend': { str: 4, dex: 2, con: 4, int: 2, wis: 4, cha: 4, la: 4 },
+    'Vampire': { str: 6, dex: 4, int: 2, wis: 2, cha: 4, la: 8 },
+    'Custom': { la: 0 }, // Custom template starts with LA 0
+};
+
 const INITIAL_POINT_POOL_3_5E = 25;
 const DEFAULT_MIN_PURCHASABLE_3_5E = 8;
 const DEFAULT_MAX_PURCHASABLE_3_5E = 18;
@@ -62,26 +81,29 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
     });
     const [selectedRace, setSelectedRace] = useState('Human');
     const [customRacialModifiers, setCustomRacialModifiers] = useState({
-        str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0,
+        str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0, la: 0
+    });
+    const [selectedTemplate, setSelectedTemplate] = useState('None'); // NEW: For 3.5e templates
+    const [customTemplateModifiers, setCustomTemplateModifiers] = useState({ // NEW: For custom templates
+        str: 0, dex: 0, con: 0, int: 0, wis: 0, cha: 0, la: 0
     });
     const [useCustomCosts, setUseCustomCosts] = useState(false);
     const [customAbilityCosts, setCustomAbilityCosts] = useState(() => {
         const initialCosts = {};
         for (const score of ALL_POSSIBLE_SCORES) {
-            // Initialize custom costs based on the new standard (0 for < 8)
             initialCosts[score] = STANDARD_ABILITY_COSTS_3_5E.hasOwnProperty(score) ? STANDARD_ABILITY_COSTS_3_5E[score] : 0;
         }
         return initialCosts;
     });
-    // Removed: const [allowNegativeCosts, setAllowNegativeCosts] = useState(true); 
 
     // States for min/max purchasable scores
     const [minPurchasableScore, setMinPurchasableScore] = useState(DEFAULT_MIN_PURCHASABLE_3_5E);
     const [maxPurchasableScore, setMaxPurchasableScore] = useState(DEFAULT_MAX_PURCHASABLE_3_5E);
 
-    // MODIFIED: Collapsible rules sections now start hidden (true)
-    const [isRulesCollapsed, setIsRulesCollapsed] = useState(true); // For point buy settings
-    const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(true); // For rules description at bottom
+    // Collapsible sections
+    const [isRulesCollapsed, setIsRulesCollapsed] = useState(true);
+    const [isTemplatesCollapsed, setIsTemplatesCollapsed] = useState(true); // NEW: For template settings
+    const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(true);
 
 
     const [calculatedStats, setCalculatedStats] = useState({
@@ -89,6 +111,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
         remainingPoints: INITIAL_POINT_POOL_3_5E,
         finalAbilityScores: { str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8 },
         finalAbilityMods: { str: -1, dex: -1, con: -1, int: -1, wis: -1, cha: -1 },
+        totalLA: 0, // NEW: Combined LA
     });
 
     const getCostForScore = useCallback((score) => {
@@ -97,14 +120,25 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
         if (score < 2 || score > 20 || !activeCosts.hasOwnProperty(score)) {
             return Infinity; 
         }
-
-        // Now, costs below 8 are explicitly 0 in the STANDARD_ABILITY_COSTS_3_5E constant
-        // and custom costs are defined by the user. No need for a separate allowNegativeCosts check here.
         return activeCosts[score];
     }, [useCustomCosts, customAbilityCosts]); 
 
     const handleCustomRacialModChange = (ability, value) => {
-        setCustomRacialModifiers(prev => ({ ...prev, [ability]: parseInt(value) || 0 }));
+        // Ensure LA is handled correctly for custom race
+        if (ability === 'la') {
+            setCustomRacialModifiers(prev => ({ ...prev, [ability]: parseInt(value) || 0 }));
+        } else {
+            setCustomRacialModifiers(prev => ({ ...prev, [ability]: parseInt(value) || 0 }));
+        }
+    };
+
+    const handleCustomTemplateModChange = (ability, value) => { // NEW: For custom template mods
+        // Ensure LA is handled correctly for custom template
+        if (ability === 'la') {
+            setCustomTemplateModifiers(prev => ({ ...prev, [ability]: parseInt(value) || 0 }));
+        } else {
+            setCustomTemplateModifiers(prev => ({ ...prev, [ability]: parseInt(value) || 0 }));
+        }
     };
 
     const handleCustomPointPoolInput = (value) => {
@@ -126,21 +160,48 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
         let totalPointsSpent = 0;
         const finalAbilityScores = {};
         const finalAbilityMods = {};
-        const activeRacialModifiers = selectedRace === 'Custom'
-            ? customRacialModifiers
-            : RACE_MODIFIERS_3_5E[selectedRace] || {};
-
+        
+        // 1. Get base scores from point buy
         for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
             const currentTargetScore = targetScores[ability];
             const cost = getCostForScore(currentTargetScore);
             if (cost !== Infinity) { 
                 totalPointsSpent += cost;
             }
+        }
 
-            const raceMod = activeRacialModifiers[ability] || 0;
-            const finalScore = currentTargetScore + raceMod;
-            finalAbilityScores[ability] = finalScore;
-            finalAbilityMods[ability] = getAbilityMod(finalScore);
+        // Initialize scores with point-bought values
+        const scoresAfterPointBuy = { ...targetScores };
+
+        // 2. Apply Racial Modifiers
+        let raceLA = 0;
+        const activeRacialModifiers = selectedRace === 'Custom'
+            ? customRacialModifiers
+            : RACE_MODIFIERS_3_5E[selectedRace] || {};
+
+        raceLA = activeRacialModifiers.la || 0; // Get race LA
+
+        for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+            scoresAfterPointBuy[ability] += (activeRacialModifiers[ability] || 0);
+        }
+
+        // 3. Apply Template Modifiers (NEW)
+        let templateLA = 0;
+        const activeTemplateModifiers = selectedTemplate === 'Custom'
+            ? customTemplateModifiers
+            : TEMPLATE_MODIFIERS_3_5E[selectedTemplate] || {};
+        
+        templateLA = activeTemplateModifiers.la || 0; // Get template LA
+
+        const scoresAfterAllBonuses = { ...scoresAfterPointBuy }; // Clone after race for template application
+        for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+            scoresAfterAllBonuses[ability] += (activeTemplateModifiers[ability] || 0);
+        }
+
+        // Finalize scores and modifiers after all bonuses
+        for (const ability of ['str', 'dex', 'con', 'int', 'wis', 'cha']) {
+            finalAbilityScores[ability] = scoresAfterAllBonuses[ability];
+            finalAbilityMods[ability] = getAbilityMod(finalAbilityScores[ability]);
         }
 
         setCalculatedStats({
@@ -148,8 +209,9 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
             remainingPoints: pointPool - totalPointsSpent,
             finalAbilityScores: finalAbilityScores,
             finalAbilityMods: finalAbilityMods,
+            totalLA: raceLA + templateLA, // Calculate total LA
         });
-    }, [pointPool, targetScores, selectedRace, customRacialModifiers, getCostForScore]);
+    }, [pointPool, targetScores, selectedRace, customRacialModifiers, selectedTemplate, customTemplateModifiers, getCostForScore]); // Updated dependencies
 
     useEffect(() => {
         calculateAllStats();
@@ -309,7 +371,9 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                         className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-indigo-500 focus:border-indigo-500"
                     >
                         {Object.keys(RACE_MODIFIERS_3_5E).map(race => (
-                            <option key={race} value={race}>{race}</option>
+                            <option key={race} value={race}>
+                                {race} (LA {RACE_MODIFIERS_3_5E[race].la})
+                            </option>
                         ))}
                     </select>
                 </div>
@@ -319,29 +383,108 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
             {selectedRace === 'Custom' && (
                 <div className="mb-8 p-4 bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-500 rounded-lg shadow-inner">
                     <h2 className="text-xl md:text-2xl font-semibold text-center text-yellow-800 dark:text-yellow-200 mb-4">
-                        Define Custom Racial Modifiers
+                        Define Custom Racial Modifiers & LA
                     </h2>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                        {Object.keys(customRacialModifiers).map(ability => (
+                        {['str', 'dex', 'con', 'int', 'wis', 'cha'].map(ability => (
                             <div key={ability} className="flex items-center justify-between">
-                                <label htmlFor={`custom-mod-${ability}`} className="text-sm font-medium text-yellow-700 dark:text-yellow-300 capitalize">
+                                <label htmlFor={`custom-race-mod-${ability}`} className="text-sm font-medium text-yellow-700 dark:text-yellow-300 capitalize">
                                     {ability.toUpperCase()}:
                                 </label>
                                 <input
-                                    id={`custom-mod-${ability}`}
+                                    id={`custom-race-mod-${ability}`}
                                     type="number"
-                                    value={customRacialModifiers[ability]}
+                                    value={customRacialModifiers[ability] || 0}
                                     onChange={(e) => handleCustomRacialModChange(ability, e.target.value)}
                                     className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500"
                                 />
                             </div>
                         ))}
+                        <div className="flex items-center justify-between col-span-2 sm:col-span-1">
+                            <label htmlFor={`custom-race-la`} className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                                LA:
+                            </label>
+                            <input
+                                id={`custom-race-la`}
+                                type="number"
+                                value={customRacialModifiers.la}
+                                onChange={(e) => handleCustomRacialModChange('la', e.target.value)}
+                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500"
+                            />
+                        </div>
                     </div>
                     <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2 text-center">
                         Enter the racial bonus/penalty (e.g., enter '2' for +2, '-2' for -2).
                     </p>
                 </div>
             )}
+
+            {/* NEW: 3.5e Templates Selection and Customization */}
+            <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner">
+                <h2 className="text-xl md:text-2xl font-semibold text-center text-purple-600 dark:text-purple-300 mb-4 cursor-pointer" onClick={() => setIsTemplatesCollapsed(!isTemplatesCollapsed)}>
+                    D&D 3.5e Templates
+                    <span className="ml-2 text-sm">[{isTemplatesCollapsed ? 'Expand' : 'Collapse'}]</span>
+                </h2>
+                {!isTemplatesCollapsed && (
+                    <div className="transition-all duration-300 ease-in-out">
+                        <div className="mb-4">
+                            <label htmlFor="templateSelect" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                                Select Template:
+                            </label>
+                            <select
+                                id="templateSelect"
+                                value={selectedTemplate}
+                                onChange={(e) => setSelectedTemplate(e.target.value)}
+                                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-purple-500 focus:border-purple-500"
+                            >
+                                {Object.keys(TEMPLATE_MODIFIERS_3_5E).map(template => (
+                                    <option key={template} value={template}>
+                                        {template} (LA {TEMPLATE_MODIFIERS_3_5E[template].la})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                        {selectedTemplate === 'Custom' && (
+                            <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900 border-l-4 border-yellow-500 rounded-lg shadow-inner">
+                                <h3 className="text-lg font-medium text-center text-yellow-800 dark:text-yellow-200 mb-2">
+                                    Define Custom Template Modifiers & LA
+                                </h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                    {['str', 'dex', 'con', 'int', 'wis', 'cha'].map(ability => (
+                                        <div key={ability} className="flex items-center justify-between">
+                                            <label htmlFor={`custom-template-mod-${ability}`} className="text-sm font-medium text-yellow-700 dark:text-yellow-300 capitalize">
+                                                {ability.toUpperCase()}:
+                                            </label>
+                                            <input
+                                                id={`custom-template-mod-${ability}`}
+                                                type="number"
+                                                value={customTemplateModifiers[ability] || 0}
+                                                onChange={(e) => handleCustomTemplateModChange(ability, e.target.value)}
+                                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500"
+                                            />
+                                        </div>
+                                    ))}
+                                    <div className="flex items-center justify-between col-span-2 sm:col-span-1">
+                                        <label htmlFor={`custom-template-la`} className="text-sm font-medium text-yellow-700 dark:text-yellow-300">
+                                            LA:
+                                        </label>
+                                        <input
+                                            id={`custom-template-la`}
+                                            type="number"
+                                            value={customTemplateModifiers.la}
+                                            onChange={(e) => handleCustomTemplateModChange('la', e.target.value)}
+                                            className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500"
+                                        />
+                                    </div>
+                                </div>
+                                <p className="text-sm text-yellow-600 dark:text-yellow-400 mt-2 text-center">
+                                    Enter the template's ability score bonus/penalty and Level Adjustment.
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
 
             {/* Point Buy Rule Selection & Min/Max Purchasable Scores */}
             <div className="mb-8 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg shadow-inner">
@@ -494,6 +637,11 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                             {calculatedStats.remainingPoints}
                         </span>
                     </div>
+                    {/* NEW: Display Total LA */}
+                    <div className="text-center">
+                        <span className="block text-gray-700 dark:text-gray-300">Total LA:</span>
+                        <span className="text-indigo-600 dark:text-indigo-300">{calculatedStats.totalLA}</span>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-lg">
@@ -510,6 +658,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                     ({calculatedStats.finalAbilityMods[ability] >= 0 ? '+' : ''}{calculatedStats.finalAbilityMods[ability]})
                                 </span>
                             </div>
+                            {/* Display racial modifiers, including LA for Custom Race */}
                             {(selectedRace !== 'Custom' && RACE_MODIFIERS_3_5E[selectedRace] && RACE_MODIFIERS_3_5E[selectedRace][ability]) ? (
                                 <span className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                     (Racial: {RACE_MODIFIERS_3_5E[selectedRace][ability] >= 0 ? '+' : ''}{RACE_MODIFIERS_3_5E[selectedRace][ability]})
@@ -517,6 +666,16 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                             ) : (selectedRace === 'Custom' && customRacialModifiers[ability] !== 0) ? (
                                 <span className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
                                     (Custom Racial: {customRacialModifiers[ability] >= 0 ? '+' : ''}{customRacialModifiers[ability]})
+                                </span>
+                            ) : null}
+                            {/* Display template modifiers */}
+                            {(selectedTemplate !== 'Custom' && TEMPLATE_MODIFIERS_3_5E[selectedTemplate] && TEMPLATE_MODIFIERS_3_5E[selectedTemplate][ability]) ? (
+                                <span className="text-xs text-purple-600 dark:text-purple-400 mt-1">
+                                    (Template: {TEMPLATE_MODIFIERS_3_5E[selectedTemplate][ability] >= 0 ? '+' : ''}{TEMPLATE_MODIFIERS_3_5E[selectedTemplate][ability]})
+                                </span>
+                            ) : (selectedTemplate === 'Custom' && customTemplateModifiers[ability] !== 0) ? (
+                                <span className="text-xs text-yellow-600 dark:text-yellow-400 mt-1">
+                                    (Custom Template: {customTemplateModifiers[ability] >= 0 ? '+' : ''}{customTemplateModifiers[ability]})
                                 </span>
                             ) : null}
                         </div>
@@ -551,7 +710,6 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                         <tr key={score}>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{score}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                                                {/* No longer checking for allowNegativeCosts */}
                                                 {cost}
                                             </td>
                                         </tr>
@@ -574,7 +732,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                 )}
                 <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a>.</p>
                 <p className="mt-2">Join our community on Discord: <a href={discordLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Mystery Fantasy Dungeon 9000</a></p>
-                {/* NEW: Feedback Email Link */}
+                {/* Feedback Email Link */}
                 <p className="mt-2">
                     Have feedback or suggestions? Email us at: {' '}
                     <a href={`mailto:${feedbackEmail}`} className="text-blue-600 dark:text-blue-400 hover:underline font-bold">
@@ -621,20 +779,18 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
     const [customAbilityCosts, setCustomAbilityCosts] = useState(() => {
         const initialCosts = {};
         for (const score of ALL_POSSIBLE_SCORES) {
-            // Initialize custom costs based on the new standard (0 for < 8)
             initialCosts[score] = STANDARD_ABILITY_COSTS_5E.hasOwnProperty(score) ? STANDARD_ABILITY_COSTS_5E[score] : 0;
         }
         return initialCosts;
     });
-    // Removed: const [allowNegativeCosts, setAllowNegativeCosts] = useState(true);
 
     // States for min/max purchasable scores
     const [minPurchasableScore, setMinPurchasableScore] = useState(DEFAULT_MIN_PURCHASABLE_5E);
     const [maxPurchasableScore, setMaxPurchasableScore] = useState(DEFAULT_MAX_PURCHASABLE_5E);
 
-    // MODIFIED: Collapsible rules sections now start hidden (true)
-    const [isRulesCollapsed, setIsRulesCollapsed] = useState(true); // For point buy settings
-    const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(true); // For rules description at bottom
+    // Collapsible rules sections
+    const [isRulesCollapsed, setIsRulesCollapsed] = useState(true);
+    const [isDescriptionCollapsed, setIsDescriptionCollapsed] = useState(true);
 
 
     const [calculatedStats, setCalculatedStats] = useState({
@@ -651,7 +807,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
         setSelectedAnyIncreases(prev => ({ ...prev, [key]: value }));
     };
 
-    // NEW STATE FOR OPTIONAL STARTING FEAT/ASI
+    // Optional Starting Feat/ASI
     const [startingAsiOption, setStartingAsiOption] = useState('none'); // 'none', 'standard', 'halfFeat'
     const [featAsiChoices, setFeatAsiChoices] = useState({
         ability1: '', // for +2 or first +1
@@ -668,8 +824,6 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
         if (score < 2 || score > 20 || !activeCosts.hasOwnProperty(score)) {
             return Infinity;
         }
-        // Now, costs below 8 are explicitly 0 in the STANDARD_ABILITY_COSTS_5E constant
-        // and custom costs are defined by the user. No need for a separate allowNegativeCosts check here.
         return activeCosts[score];
     }, [useCustomCosts, customAbilityCosts]);
 
@@ -1350,7 +1504,6 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                         <tr key={score}>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{score}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-                                                {/* No longer checking for allowNegativeCosts */}
                                                 {cost}
                                             </td>
                                         </tr>
@@ -1412,7 +1565,7 @@ const App = () => {
     const discordInviteLink = "http://discord.gg/kCjuPr6"; // IMPORTANT: Ensure this is your actual invite link!
     const paypalLink = "https://paypal.me/MFD9k"; // Your PayPal.Me link
     const cashappLink = "https://cash.app/$MFD9k"; // Your Cash App link (or Cashtag in a URL format if available)
-    const feedbackEmailAddress = "feedback@mfd9k.com"; // Placeholder email address
+    const feedbackEmailAddress = "MysteryFantasyDungeon9k@gmail.com"; // UPDATED: Email address
 
     return (
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 font-inter">
