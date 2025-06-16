@@ -318,6 +318,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
 
 
     return (
+        // Add dark mode to the main div of the calculator component
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 md:p-8">
             <h1 className="text-3xl md:text-4xl font-bold text-center text-purple-700 dark:text-purple-400 mb-6">
                 D&D 3.5e Point Buy Calculator
@@ -341,7 +342,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                 setPointPool(parseInt(e.target.value));
                             }
                         }}
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-indigo-500 focus:border-indigo-500"
+                        // Add dark mode classes for select background and text
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-gray-100"
                     >
                         <option value={15}>15 Points (Low Fantasy)</option>
                         <option value={25}>25 Points (Standard)</option>
@@ -354,7 +356,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                             type="number"
                             value={customPointPoolInput}
                             onChange={(e) => handleCustomPointPoolInput(e.target.value)}
-                            className="mt-2 w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-indigo-500 focus:border-indigo-500 text-right"
+                            // Add dark mode classes for input background and text
+                            className="mt-2 w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-indigo-500 focus:border-indigo-500 text-right text-gray-900 dark:text-gray-100"
                             placeholder="Enter custom points"
                             min="0"
                         />
@@ -368,7 +371,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                         id="raceSelect"
                         value={selectedRace}
                         onChange={(e) => setSelectedRace(e.target.value)}
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-indigo-500 focus:border-indigo-500"
+                        // Add dark mode classes for select background and text
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-gray-100"
                     >
                         {Object.keys(RACE_MODIFIERS_3_5E).map(race => (
                             <option key={race} value={race}>
@@ -396,7 +400,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                     type="number"
                                     value={customRacialModifiers[ability] || 0}
                                     onChange={(e) => handleCustomRacialModChange(ability, e.target.value)}
-                                    className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500"
+                                    // Add dark mode classes for input background and text
+                                    className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 dark:text-gray-100"
                                 />
                             </div>
                         ))}
@@ -409,7 +414,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                 type="number"
                                 value={customRacialModifiers.la}
                                 onChange={(e) => handleCustomRacialModChange('la', e.target.value)}
-                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500"
+                                // Add dark mode classes for input background and text
+                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 dark:text-gray-100"
                             />
                         </div>
                     </div>
@@ -435,7 +441,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                 id="templateSelect"
                                 value={selectedTemplate}
                                 onChange={(e) => setSelectedTemplate(e.target.value)}
-                                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-purple-500 focus:border-purple-500"
+                                // Add dark mode classes for select background and text
+                                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-purple-500 focus:border-purple-500 text-gray-900 dark:text-gray-100"
                             >
                                 {Object.keys(TEMPLATE_MODIFIERS_3_5E).map(template => (
                                     <option key={template} value={template}>
@@ -460,7 +467,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                                 type="number"
                                                 value={customTemplateModifiers[ability] || 0}
                                                 onChange={(e) => handleCustomTemplateModChange(ability, e.target.value)}
-                                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500"
+                                                // Add dark mode classes for input background and text
+                                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 dark:text-gray-100"
                                             />
                                         </div>
                                     ))}
@@ -473,7 +481,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                             type="number"
                                             value={customTemplateModifiers.la}
                                             onChange={(e) => handleCustomTemplateModChange('la', e.target.value)}
-                                            className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500"
+                                            // Add dark mode classes for input background and text
+                                            className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 dark:text-gray-100"
                                         />
                                     </div>
                                 </div>
@@ -533,7 +542,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                                 type="number"
                                                 value={customAbilityCosts[score]} 
                                                 onChange={(e) => handleCustomCostChange(score, e.target.value)}
-                                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
+                                                // Add dark mode classes for input background and text
+                                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-gray-100"
                                                 min="-100" 
                                                 max="200" 
                                             />
@@ -559,7 +569,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                         type="number"
                                         value={minPurchasableScore}
                                         onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
-                                        className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
+                                        // Add dark mode classes for input background and text
+                                        className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-gray-100"
                                         min="1" 
                                         max="30" 
                                     />
@@ -571,7 +582,8 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                         type="number"
                                         value={maxPurchasableScore}
                                         onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)}
-                                        className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500"
+                                        // Add dark mode classes for input background and text
+                                        className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 dark:text-gray-100"
                                         min="1" 
                                         max="30" 
                                     />
@@ -592,6 +604,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {Object.keys(targetScores).map((ability) => (
+                        // Add dark mode to the ability score card backgrounds
                         <div key={ability} className="flex items-center justify-between bg-white dark:bg-gray-900 p-3 rounded-lg shadow-sm">
                             <span className="font-medium text-lg capitalize w-20">
                                 {ability.toUpperCase()}:
@@ -604,7 +617,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                 >
                                     -
                                 </button>
-                                <span className="text-xl font-bold w-12 text-center">
+                                <span className="text-xl font-bold w-12 text-center text-gray-900 dark:text-gray-100"> {/* Add dark mode text color */}
                                     {targetScores[ability]}
                                 </span>
                                 <button
@@ -646,6 +659,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-lg">
                     {Object.keys(calculatedStats.finalAbilityScores).map((ability) => (
+                        // Add dark mode to the final ability score card backgrounds
                         <div key={ability} className="bg-white dark:bg-gray-900 p-3 rounded-lg shadow-sm flex flex-col items-center">
                             <span className="font-semibold text-xl capitalize mb-1">
                                 {ability.toUpperCase()}
@@ -708,7 +722,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     {Object.entries(STANDARD_ABILITY_COSTS_3_5E).map(([score, cost]) => (
                                         <tr key={score}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{score}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{score}</td> {/* Add dark mode text color */}
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                                                 {cost}
                                             </td>
@@ -1032,6 +1046,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
 
 
     return (
+        // Add dark mode to the main div of the calculator component
         <div className="bg-white dark:bg-gray-800 shadow-lg rounded-xl p-6 md:p-8">
             <h1 className="text-3xl md:text-4xl font-bold text-center text-red-700 dark:text-red-400 mb-6">
                 D&D 5e Point Buy Calculator
@@ -1055,7 +1070,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                 setPointPool(parseInt(e.target.value));
                             }
                         }}
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500"
+                        // Add dark mode classes for select background and text
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500 text-gray-900 dark:text-gray-100"
                     >
                         <option value={27}>27 Points (Standard 5e)</option>
                         <option value={15}>15 Points (Low)</option>
@@ -1066,7 +1082,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                             type="number"
                             value={customPointPoolInput}
                             onChange={(e) => handleCustomPointPoolInput(e.target.value)}
-                            className="mt-2 w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500 text-right"
+                            // Add dark mode classes for input background and text
+                            className="mt-2 w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500 text-right text-gray-900 dark:text-gray-100"
                             placeholder="Enter custom points"
                             min="0"
                         />
@@ -1080,7 +1097,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                         id="raceSelect5e"
                         value={selectedRace}
                         onChange={(e) => setSelectedRace(e.target.value)}
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500"
+                        // Add dark mode classes for select background and text
+                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500 text-gray-900 dark:text-gray-100"
                     >
                         {Object.keys(RACE_MODIFIERS_5E).map(race => (
                             <option key={race} value={race}>{race}</option>
@@ -1106,7 +1124,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                     type="number"
                                     value={customRacialModifiers[ability]}
                                     onChange={(e) => handleCustomRacialModChange(ability, e.target.value)}
-                                    className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500"
+                                    // Add dark mode classes for input background and text
+                                    className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-yellow-500 focus:border-yellow-500 text-gray-900 dark:text-gray-100"
                                 />
                             </div>
                         ))}
@@ -1133,7 +1152,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                     id="any1-select"
                                     value={selectedAnyIncreases.any1}
                                     onChange={(e) => handleAnyIncreaseChange('any1', e.target.value)}
-                                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                                    // Add dark mode classes for select background and text
+                                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100"
                                 >
                                     <option value="">-- Choose --</option>
                                     {abilities.map(ab => (
@@ -1153,7 +1173,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                     id="any2-select"
                                     value={selectedAnyIncreases.any2}
                                     onChange={(e) => handleAnyIncreaseChange('any2', e.target.value)}
-                                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-blue-500 focus:border-blue-500"
+                                    // Add dark mode classes for select background and text
+                                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100"
                                 >
                                     <option value="">-- Choose --</option>
                                     {abilities.map(ab => (
@@ -1216,7 +1237,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                                 type="number"
                                                 value={customAbilityCosts[score]} 
                                                 onChange={(e) => handleCustomCostChange(score, e.target.value)}
-                                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
+                                                // Add dark mode classes for input background and text
+                                                className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500 text-gray-900 dark:text-gray-100"
                                                 min="-100" 
                                                 max="200" 
                                             />
@@ -1286,7 +1308,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                             id="feat-asi-ability1"
                                             value={featAsiChoices.ability1}
                                             onChange={(e) => handleFeatAsiChange('ability1', e.target.value)}
-                                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500"
+                                            // Add dark mode classes for select background and text
+                                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500 text-gray-900 dark:text-gray-100"
                                         >
                                             <option value="">-- Select Ability --</option>
                                             {abilities.map(ab => (
@@ -1306,7 +1329,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                                 id="feat-asi-ability2"
                                                 value={featAsiChoices.ability2}
                                                 onChange={(e) => handleFeatAsiChange('ability2', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500"
+                                                // Add dark mode classes for select background and text
+                                                className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-red-500 focus:border-red-500 text-gray-900 dark:text-gray-100"
                                             >
                                                 <option value="">-- Select Ability (optional) --</option>
                                                 {abilities.map(ab => (
@@ -1338,7 +1362,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                         type="number"
                                         value={minPurchasableScore}
                                         onChange={(e) => handleMinMaxChange(setMinPurchasableScore, e.target.value)}
-                                        className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
+                                        // Add dark mode classes for input background and text
+                                        className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500 text-gray-900 dark:text-gray-100"
                                         min="1" 
                                         max="30" 
                                     />
@@ -1350,7 +1375,8 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                         type="number"
                                         value={maxPurchasableScore}
                                         onChange={(e) => handleMinMaxChange(setMaxPurchasableScore, e.target.value)} 
-                                        className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500"
+                                        // Add dark mode classes for input background and text
+                                        className="w-20 p-1 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 text-right focus:ring-red-500 focus:border-red-500 text-gray-900 dark:text-gray-100"
                                         min="1" 
                                         max="30" 
                                     />
@@ -1371,6 +1397,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {abilities.map((ability) => (
+                        // Add dark mode to the ability score card backgrounds
                         <div key={ability} className="flex items-center justify-between bg-white dark:bg-gray-900 p-3 rounded-lg shadow-sm">
                             <span className="font-medium text-lg capitalize w-20">
                                 {ability.toUpperCase()}:
@@ -1383,7 +1410,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                 >
                                     -
                                 </button>
-                                <span className="text-xl font-bold w-12 text-center">
+                                <span className="text-xl font-bold w-12 text-center text-gray-900 dark:text-gray-100"> {/* Add dark mode text color */}
                                     {targetScores[ability]}
                                 </span>
                                 <button
@@ -1420,6 +1447,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-lg">
                     {abilities.map((ability) => (
+                        // Add dark mode to the final ability score card backgrounds
                         <div key={ability} className="bg-white dark:bg-gray-900 p-3 rounded-lg shadow-sm flex flex-col items-center">
                             <span className="font-semibold text-xl capitalize mb-1">
                                 {ability.toUpperCase()}
@@ -1502,7 +1530,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                                 <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                                     {Object.entries(STANDARD_ABILITY_COSTS_5E).map(([score, cost]) => (
                                         <tr key={score}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{score}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">{score}</td> {/* Add dark mode text color */}
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
                                                 {cost}
                                             </td>
@@ -1569,12 +1597,11 @@ const App = () => {
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
 
-    // Discord Widget URL and dynamic theme
-    const discordServerId = "315893126805979136"; // The ID from the user's iframe
-    const discordInviteLink = `https://discord.gg/kCjuPr6`; // Your general invite link
+    // Discord Invite Link and support links
+    const discordInviteLink = `https://discord.gg/kCjuPr6`;
     const paypalLink = "https://paypal.me/MFD9k";
     const cashappLink = "https://cash.app/$MFD9k";
-    const feedbackEmailAddress = "MysteryFantasyDungeon9k@gmail.com";
+    const feedbackEmailAddress = "MysteryFantasyDungeon9k@gmail.9000.com";
 
     // Effect to apply/remove 'dark' class on HTML element
     useEffect(() => {
@@ -1587,12 +1614,11 @@ const App = () => {
         }
     }, [darkMode]);
 
-    // Dynamic Discord widget src URL
-    const discordWidgetSrc = `https://discord.com/widget?id=${discordServerId}&theme=${darkMode ? 'dark' : 'light'}`;
+    // Removed discordServerId and discordWidgetSrc as they are no longer needed.
 
     return (
-        // Added h-screen w-screen and !important for diagnostic purposes
-        <div className="h-screen w-screen p-4 font-inter !bg-gray-100 dark:!bg-gray-900 !text-gray-900 dark:!text-gray-100">
+        // Ensure the main container explicitly sets its colors for dark mode
+        <div className="min-h-screen p-4 font-inter bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
             <div className="max-w-4xl mx-auto">
                 {/* Dark Mode Toggle Button */}
                 <div className="flex justify-end mb-4">
@@ -1623,7 +1649,7 @@ const App = () => {
                 {/* Dark Mode Debugger - This div should ALWAYS change color with dark mode */}
                 <div className="p-4 mb-8 text-center rounded-lg shadow-md font-bold
                             bg-green-200 text-green-800
-                            dark:!bg-green-800 dark:!text-green-200
+                            dark:bg-green-800 dark:text-green-200
                             transition-colors duration-300 ease-in-out">
                     <p>
                         Dark Mode Test Section: This background should be <span className="font-extrabold">{darkMode ? 'DARK GREEN' : 'LIGHT GREEN'}</span> and text <span className="font-extrabold">{darkMode ? 'LIGHT GREEN' : 'DARK GREEN'}</span>.
@@ -1640,7 +1666,8 @@ const App = () => {
                         id="gameSelect"
                         value={activeGame}
                         onChange={(e) => setActiveGame(e.target.value)}
-                        className="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-purple-500 focus:border-purple-500 text-lg font-semibold"
+                        // Add dark mode classes for select background and text
+                        className="p-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-900 focus:ring-purple-500 focus:border-purple-500 text-lg font-semibold text-gray-900 dark:text-gray-100"
                     >
                         <option value="3.5e">D&D 3.5e</option>
                         <option value="5e">D&D 5e</option>
@@ -1651,22 +1678,22 @@ const App = () => {
                 {activeGame === '3.5e' && <Dnd35eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
                 {activeGame === '5e' && <Dnd5eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
 
-                {/* Discord Server Widget Section - MOVED TO BOTTOM */}
-                <div className="flex justify-center mt-8 mb-4 flex-col items-center"> {/* Added flex-col & items-center for vertical centering of text */}
-                    <p className="text-lg font-bold text-center text-gray-700 dark:text-gray-300 mb-4">
-                        Presented by <a href={discordInviteLink} target="_blank" rel="noopener noreferrer" className="text-purple-700 dark:text-purple-400 hover:underline">MFD9K Discord</a>
-                    </p>
-                    <iframe
-                        src={discordWidgetSrc}
-                        width="350" // Base width
-                        height="500" // Base height
-                        allowTransparency="true"
-                        frameBorder="0"
-                        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
-                        title="Discord Server Widget"
-                        className="w-full max-w-sm md:max-w-md lg:max-w-lg h-[300px] md:h-[400px] lg:h-[500px] rounded-lg shadow-xl"
-                        style={{ minWidth: '250px' }} // Smallest acceptable width for the widget
-                    ></iframe>
+                {/* Discord Button Link Section (Replaced Widget) */}
+                <div className="flex justify-center mt-8 mb-4">
+                    <a
+                        href={discordInviteLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-full shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500
+                                   dark:bg-purple-600 dark:hover:bg-purple-700 dark:focus:ring-purple-500 transition-colors duration-300 ease-in-out"
+                        aria-label="Join our Discord Server"
+                    >
+                        {/* Discord Icon (simple SVG) */}
+                        <svg className="-ml-1 mr-3 h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M20.916 2.001A18.822 18.822 0 0017.065 0C15.006 0 13.111.954 11.666 2.457L11.5 2.625l-.166-.168C10.055.954 8.16 0 6.101 0A18.82 18.82 0 002.25 2.001C.967 4.298.375 6.945 0 9.699c.356 3.125 1.705 5.922 4.095 7.828l-.348 2.052c-1.106 6.54 5.962 5.86 5.962 5.86l.666-3.921c1.233.155 2.48.155 3.713 0l.666 3.921c0 0 7.068.68 5.962-5.86l-.348-2.052c2.39-1.906 3.739-4.703 4.095-7.828-.375-2.754-.967-5.401-2.25-7.698zm-6.096 15.656a1.5 1.5 0 01-1.5-1.5 1.5 1.5 0 011.5-1.5 1.5 1.5 0 011.5 1.5 1.5 1.5 0 01-1.5 1.5zm3.626-3.89a1.5 1.5 0 01-1.5-1.5 1.5 1.5 0 011.5-1.5 1.5 1.5 0 011.5 1.5 1.5 1.5 0 01-1.5 1.5zM6.866 17.657a1.5 1.5 0 01-1.5-1.5 1.5 1.5 0 011.5-1.5 1.5 1.5 0 011.5 1.5 1.5 1.5 0 01-1.5 1.5z" />
+                        </svg>
+                        Join Our Discord Server
+                    </a>
                 </div>
 
             </div>
