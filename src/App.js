@@ -1560,7 +1560,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
 const App = () => {
     // State to manage which game calculator is currently active
     const [activeGame, setActiveGame] = useState('3.5e'); // '3.5e' or '5e'
-    // NEW: Dark Mode State, initialized from local storage or system preference
+    // Dark Mode State, initialized from local storage or system preference
     const [darkMode, setDarkMode] = useState(() => {
         const savedMode = localStorage.getItem('theme');
         if (savedMode) {
@@ -1568,6 +1568,13 @@ const App = () => {
         }
         return window.matchMedia('(prefers-color-scheme: dark)').matches;
     });
+
+    // Discord Widget URL and dynamic theme
+    const discordServerId = "315893126805979136"; // The ID from the user's iframe
+    const discordInviteLink = `https://discord.gg/kCjuPr6`; // Your general invite link
+    const paypalLink = "https://paypal.me/MFD9k";
+    const cashappLink = "https://cash.app/$MFD9k";
+    const feedbackEmailAddress = "MysteryFantasyDungeon9k@gmail.com";
 
     // Effect to apply/remove 'dark' class on HTML element
     useEffect(() => {
@@ -1580,15 +1587,10 @@ const App = () => {
         }
     }, [darkMode]);
 
-    // Define your Discord invite link here (passed to both calculators)
-    const discordInviteLink = "http://discord.gg/kCjuPr6"; // IMPORTANT: Ensure this is your actual invite link!
-    const paypalLink = "https://paypal.me/MFD9k"; // Your PayPal.Me link
-    const cashappLink = "https://cash.app/$MFD9k"; // Your Cash App link (or Cashtag in a URL format if available)
-    const feedbackEmailAddress = "MysteryFantasyDungeon9k@gmail.com"; // UPDATED: Email address
+    // Dynamic Discord widget src URL
+    const discordWidgetSrc = `https://discord.com/widget?id=${discordServerId}&theme=${darkMode ? 'dark' : 'light'}`;
 
     return (
-        // The main container will react to the 'dark' class on the HTML element
-        // The 'min-h-screen bg-gray-100 dark:bg-gray-900' ensures the background changes
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 font-inter">
             <div className="max-w-4xl mx-auto">
                 {/* Dark Mode Toggle Button */}
@@ -1612,10 +1614,33 @@ const App = () => {
                     </button>
                 </div>
 
-                {/* Main Heading for the entire application - Adjusted size */}
-                <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 dark:text-purple-400 mb-8 text-center">
-                    RPG Calculator presented by <a href={discordInviteLink} target="_blank" rel="noopener noreferrer" className="text-purple-700 dark:text-purple-400 hover:underline">MFD9K Discord</a>
+                {/* Main Heading for the entire application */}
+                <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 dark:text-purple-400 mb-4 text-center">
+                    RPG Point Buy Calculator
                 </h1>
+
+                {/* Discord Server Widget Section */}
+                <div className="flex justify-center mb-4"> {/* Adjusted margin-bottom */}
+                    <iframe
+                        src={discordWidgetSrc}
+                        width="350" // Base width
+                        height="500" // Base height
+                        allowTransparency="true"
+                        frameBorder="0"
+                        sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                        title="Discord Server Widget"
+                        // Responsive Tailwind classes:
+                        // w-full: takes full width of parent
+                        // max-w-sm/md/lg: limits max width for better readability on larger screens
+                        // mx-auto: centers the iframe
+                        // h-[300px]/md:h-[400px]/lg:h-[500px]: sets responsive height for readability
+                        className="w-full max-w-sm md:max-w-md lg:max-w-lg h-[300px] md:h-[400px] lg:h-[500px] rounded-lg shadow-xl"
+                        style={{ minWidth: '250px' }} // Smallest acceptable width for the widget
+                    ></iframe>
+                </div>
+                <p className="text-lg font-bold text-center text-gray-700 dark:text-gray-300 mb-8">
+                    Presented by <a href={discordInviteLink} target="_blank" rel="noopener noreferrer" className="text-purple-700 dark:text-purple-400 hover:underline">MFD9K Discord</a>
+                </p>
 
                 {/* Game Selection Dropdown */}
                 <div className="flex justify-center mb-6">
