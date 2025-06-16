@@ -1591,7 +1591,8 @@ const App = () => {
     const discordWidgetSrc = `https://discord.com/widget?id=${discordServerId}&theme=${darkMode ? 'dark' : 'light'}`;
 
     return (
-        <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 font-inter">
+        // Added h-screen w-screen and !important for diagnostic purposes
+        <div className="h-screen w-screen p-4 font-inter !bg-gray-100 dark:!bg-gray-900 !text-gray-900 dark:!text-gray-100">
             <div className="max-w-4xl mx-auto">
                 {/* Dark Mode Toggle Button */}
                 <div className="flex justify-end mb-4">
@@ -1622,7 +1623,7 @@ const App = () => {
                 {/* Dark Mode Debugger - This div should ALWAYS change color with dark mode */}
                 <div className="p-4 mb-8 text-center rounded-lg shadow-md font-bold
                             bg-green-200 text-green-800
-                            dark:bg-green-800 dark:text-green-200
+                            dark:!bg-green-800 dark:!text-green-200
                             transition-colors duration-300 ease-in-out">
                     <p>
                         Dark Mode Test Section: This background should be <span className="font-extrabold">{darkMode ? 'DARK GREEN' : 'LIGHT GREEN'}</span> and text <span className="font-extrabold">{darkMode ? 'LIGHT GREEN' : 'DARK GREEN'}</span>.
