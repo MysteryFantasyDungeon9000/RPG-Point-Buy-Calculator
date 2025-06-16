@@ -28,14 +28,14 @@ const RACE_MODIFIERS_3_5E = {
     'Custom': { la: 0 }, // Custom race starts with LA 0
 };
 
-// NEW: Templates and their modifiers + LA
+// CORRECTED: Templates and their modifiers + LA based on SRD
 const TEMPLATE_MODIFIERS_3_5E = {
     'None': { la: 0 },
-    'Advanced (+4 all)': { str: 4, dex: 4, con: 4, int: 4, wis: 4, cha: 4, la: 1 },
+    'Advanced (+4 all)': { str: 4, dex: 4, con: 4, int: 4, wis: 4, cha: 4, la: 1 }, // Often considered +1 LA
     'Half-Celestial': { str: 4, dex: 2, con: 4, int: 2, wis: 4, cha: 4, la: 4 },
     'Half-Dragon': { str: 8, con: 2, int: 2, cha: 2, la: 3 },
-    'Half-Fiend': { str: 4, dex: 2, con: 4, int: 2, wis: 4, cha: 4, la: 4 },
-    'Vampire': { str: 6, dex: 4, int: 2, wis: 2, cha: 4, la: 8 },
+    'Half-Fiend': { str: 4, dex: 4, con: 2, int: 4, cha: 2, la: 4 },
+    'Vampire': { str: 6, dex: 4, int: 2, wis: 2, cha: 4, la: 8 }, // Note: No Con score for actual vampires, but we apply modifiers to base.
     'Custom': { la: 0 }, // Custom template starts with LA 0
 };
 
@@ -1560,6 +1560,25 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
 const App = () => {
     // State to manage which game calculator is currently active
     const [activeGame, setActiveGame] = useState('3.5e'); // '3.5e' or '5e'
+    // NEW: Dark Mode State, initialized from local storage or system preference
+    const [darkMode, setDarkMode] = useState(() => {
+        const savedMode = localStorage.getItem('theme');
+        if (savedMode) {
+            return savedMode === 'dark';
+        }
+        return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    });
+
+    // Effect to apply/remove 'dark' class on HTML element
+    useEffect(() => {
+        if (darkMode) {
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+            localStorage.setItem('theme', 'light');
+        }
+    }, [darkMode]);
 
     // Define your Discord invite link here (passed to both calculators)
     const discordInviteLink = "http://discord.gg/kCjuPr6"; // IMPORTANT: Ensure this is your actual invite link!
@@ -1568,10 +1587,33 @@ const App = () => {
     const feedbackEmailAddress = "MysteryFantasyDungeon9k@gmail.com"; // UPDATED: Email address
 
     return (
+        // The main container will react to the 'dark' class on the HTML element
+        // The 'min-h-screen bg-gray-100 dark:bg-gray-900' ensures the background changes
         <div className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-4 font-inter">
             <div className="max-w-4xl mx-auto">
+                {/* Dark Mode Toggle Button */}
+                <div className="flex justify-end mb-4">
+                    <button
+                        onClick={() => setDarkMode(!darkMode)}
+                        className="p-2 rounded-full bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 shadow-md flex items-center justify-center transition-colors duration-300 ease-in-out"
+                        aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                    >
+                        {darkMode ? (
+                            // Moon icon for dark mode
+                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path>
+                            </svg>
+                        ) : (
+                            // Sun icon for light mode
+                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.459 4.293a1 1 0 01-1.414 0l-.707-.707a1 1 0 010-1.414l.707-.707a1 1 0 011.414 0l.707.707a1 1 0 010 1.414zm-4.293-4.293a1 1 0 010 1.414L8.707 14a1 1 0 01-1.414 0l-.707-.707a1 1 0 010-1.414l.707-.707a1 1 0 011.414 0zM10 18a1 1 0 01-1-1v-1a1 1 0 112 0v1a1 1 0 01-1 1zm-4.293-4.459a1 1 0 010 1.414l-.707.707a1 1 0 01-1.414 0l-.707-.707a1 1 0 010-1.414l.707-.707a1 1 0 011.414 0l.707.707z"></path>
+                            </svg>
+                        )}
+                    </button>
+                </div>
+
                 {/* Main Heading for the entire application - Adjusted size */}
-                <h1 className="text-3xl md:text-4xl font-extrabold text-center text-purple-700 dark:text-purple-400 mb-8">
+                <h1 className="text-3xl md:text-4xl font-extrabold text-purple-700 dark:text-purple-400 mb-8 text-center">
                     RPG Calculator presented by <a href={discordInviteLink} target="_blank" rel="noopener noreferrer" className="text-purple-700 dark:text-purple-400 hover:underline">MFD9K Discord</a>
                 </h1>
 
@@ -1593,7 +1635,7 @@ const App = () => {
 
                 {/* Conditional Game Calculator Rendering */}
                 {activeGame === '3.5e' && <Dnd35eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
-                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
+                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
             </div>
         </div>
     );
