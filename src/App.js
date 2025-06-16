@@ -730,7 +730,7 @@ const Dnd35eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail 
                         </div>
                     </div>
                 )}
-                <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a>.</p>
+                <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a></p>
                 <p className="mt-2">Join our community on Discord: <a href={discordLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Mystery Fantasy Dungeon 9000</a></p>
                 {/* Feedback Email Link */}
                 <p className="mt-2">
@@ -1524,7 +1524,7 @@ const Dnd5eCalculator = ({ discordLink, paypalLink, cashappLink, feedbackEmail }
                         </div>
                     </div>
                 )}
-                <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a>.</p>
+                <p className="mt-8">Inspired by and a grateful nod to the excellent <a href="https://chicken-dinner.com/5e/5e-point-buy.html" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">D&D 5e Point Buy Calculator at Chicken Dinner</a></p>
                 <p className="mt-2">Join our community on Discord: <a href={discordLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Mystery Fantasy Dungeon 9000</a></p>
                 {/* Feedback Email Link */}
                 <p className="mt-2">
@@ -1648,7 +1648,7 @@ const App = () => {
 
                 {/* Conditional Game Calculator Rendering */}
                 {activeGame === '3.5e' && <Dnd35eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
-                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
+                {activeGame === '5e' && <Dnd5eCalculator discordLink={discordInviteLink} paypalLink={paypalLink} cashappLink={cashappLink} feedbackEmail={feedbackEmailAddress} />}
 
                 {/* Discord Server Widget Section - MOVED TO BOTTOM */}
                 <div className="flex justify-center mt-8 mb-4 flex-col items-center"> {/* Added flex-col & items-center for vertical centering of text */}
